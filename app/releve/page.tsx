@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { detecter, exemple, lireReleve, type Prelevement } from "@/lib/detect";
 
 const eur = (n: number) => n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -15,6 +15,21 @@ function decoder(buf: ArrayBuffer): string {
 export default function Releve() {
   const [liste, setListe] = useState<Prelevement[] | null>(null);
   const [erreur, setErreur] = useState("");
+  const [acces, setAcces] = useState(false);
+
+  useEffect(() => {
+    try {
+      const l = sessionStorage.getItem("fantomes_liste");
+      if (l) setListe(JSON.parse(l));
+    } catch {}
+    const id = new URLSearchParams(window.location.search).get("session_id");
+    const verifier = () => fetch("/api/acces").then((r) => r.json()).then((d) => setAcces(!!d.acces)).catch(() => {});
+    if (id) {
+      fetch("/api/acces", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: id }) })
+        .then(verifier).catch(() => {});
+      window.history.replaceState(null, "", "/releve");
+    } else verifier();
+  }, []);
 
   function analyser(texte: string) {
     const lignes = lireReleve(texte);
@@ -26,6 +41,7 @@ export default function Releve() {
       return;
     }
     setErreur(""); setListe(res);
+    try { sessionStorage.setItem("fantomes_liste", JSON.stringify(res)); } catch {}
   }
 
   async function surFichier(e: React.ChangeEvent<HTMLInputElement>) {
@@ -65,13 +81,14 @@ export default function Releve() {
   }
 
   const total = liste.reduce((s, p) => s + p.annuel, 0);
-  const visibles = liste.slice(0, GRATUITS);
-  const verrouilles = liste.slice(GRATUITS);
+  const nbVisibles = acces ? liste.length : GRATUITS;
+  const visibles = liste.slice(0, nbVisibles);
+  const verrouilles = liste.slice(nbVisibles);
   const totalVerrou = verrouilles.reduce((s, p) => s + p.annuel, 0);
 
   return (
     <main className="mx-auto max-w-2xl px-6 pb-32 pt-6 md:pb-12">
-      <button onClick={() => setListe(null)} className="py-2 pr-4 underline underline-offset-4">Changer de fichier</button>
+      <button onClick={() => { setListe(null); try { sessionStorage.removeItem("fantomes_liste"); } catch {} }} className="py-2 pr-4 underline underline-offset-4">Changer de fichier</button>
       <h1 className="mt-8 font-serif text-3xl font-extrabold leading-tight md:text-4xl">
         {liste.length} prélèvements réguliers, <span className="chiffre">{eur(total)} €</span> par an.
       </h1>
@@ -106,11 +123,15 @@ export default function Releve() {
         </section>
       )}
 
+      {acces ? (
+        <p className="mt-8 border-2 border-encre p-5">Accès débloqué. Les lettres de résiliation arrivent à l'étape suivante.</p>
+      ) : (
       <div className="fixed inset-x-0 bottom-0 border-t-2 border-encre bg-creme p-3 md:static md:mt-6 md:border-0 md:bg-transparent md:p-0">
         <Link href="/offre" className="flex w-full items-center justify-center bg-braise px-6 py-4 text-xl font-extrabold text-encre md:inline-flex md:w-auto">
           Débloquer la liste et les lettres
         </Link>
       </div>
+      )}
     </main>
   );
 }
