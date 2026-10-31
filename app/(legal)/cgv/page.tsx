@@ -1,4 +1,4 @@
-import { CONTACT, EDITEUR } from "@/lib/offres";
+import { CONTACT, EDITEUR, PORTAIL } from "@/lib/offres";
 
 export const metadata = { title: "Conditions générales de vente — Fantômes" };
 
@@ -22,7 +22,7 @@ export default function Page() {
       <h2>5. Garantie satisfait ou remboursé, 14 jours</h2>
       <p>Pendant 14 jours à compter du paiement, tu peux demander le remboursement intégral, sans justification, en écrivant à {CONTACT} avec l'adresse email utilisée pour payer. Le remboursement est effectué sous 5 jours ouvrés ; ta banque peut ensuite mettre quelques jours à l'afficher. Cette garantie s'ajoute à tes droits légaux.</p>
       <h2>6. Résiliation</h2>
-      <p>Les formules mensuelle et annuelle sont sans engagement. Tu peux les résilier à tout moment en écrivant à {CONTACT} : la résiliation prend effet avant le prélèvement suivant et aucun nouveau prélèvement n'est effectué. La période déjà payée reste acquise, hors garantie des 14 jours.</p>
+      <p>Les formules mensuelle et annuelle sont sans engagement. Tu peux les résilier à tout moment, toi-même, depuis le <a href={PORTAIL} className="underline underline-offset-4">portail de gestion d'abonnement</a> sécurisé de Stripe, avec l'adresse email utilisée pour payer. La résiliation prend effet à la fin de la période déjà payée et plus aucun prélèvement n'est effectué ensuite. La période déjà payée reste acquise, hors garantie des 14 jours. En cas de difficulté, écris à {CONTACT}.</p>
       <h2>7. Responsabilité</h2>
       <p>Fantômes aide à repérer des prélèvements : c'est à toi de vérifier, avant de résilier, que le service concerné ne t'est pas utile. Les lettres sont des modèles courants, à relire et à adapter. Nous ne sommes pas responsables des conséquences d'une résiliation décidée par l'utilisateur.</p>
       <h2>8. Données personnelles</h2>

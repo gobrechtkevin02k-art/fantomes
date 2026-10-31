@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
-import { CONTACT, type Plan } from "@/lib/offres";
+import { CONTACT, PORTAIL, type Plan } from "@/lib/offres";
 
 const eur = (n: number) => n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -18,7 +18,7 @@ const formules: { id: Plan; nom: string; prix: string; detail: string; jour: str
 const faq = [
   ["Est-ce que ça marche pour mon cas ?", "Si ta banque te laisse exporter un CSV et que tu as au moins 3 mois de relevé, oui. Fantômes repère les prélèvements mensuels réguliers. Les abonnements annuels ne sont pas détectés. Si ta liste ne t'apporte rien, tu es remboursé (voir la garantie)."],
   ["Combien de temps ça me prend ?", "Quelques minutes : tu déposes le fichier, tu lis la liste, tu copies les lettres de résiliation des abonnements que tu n'utilises plus."],
-  ["Et si je veux arrêter ?", `Tu écris à ${CONTACT} : l'abonnement est arrêté avant le prélèvement suivant. Pas de préavis, pas de justificatif. L'audit complet est un paiement unique, il n'y a rien à résilier.`],
+  ["Et si je veux arrêter ?", `Tu te connectes au portail de gestion avec ton email (lien sous le paiement et dans le pied de page) et tu résilies toi-même en deux clics, avant le prélèvement suivant, sans préavis ni justificatif. En cas de souci, écris à ${CONTACT}. L'audit complet est un paiement unique, il n'y a rien à résilier.`],
   ["À quoi sert exactement ce que je paie ?", "À débloquer la liste complète de tes prélèvements, une lettre de résiliation prête à envoyer pour chacun, et le total économisé sur l'année. Ton relevé reste sur ton appareil."],
 ];
 
@@ -113,6 +113,7 @@ export default function Offre() {
           </EmbeddedCheckoutProvider>
         )}
         <p className="mt-3 text-sm">Paiement sécurisé par Stripe. Fantômes ne voit jamais ton numéro de carte.</p>
+        <p className="mt-3 text-base">Déjà abonné ? <a href={PORTAIL} className="underline underline-offset-4">Gérer ou résilier mon abonnement</a></p>
       </section>
 
       <section className="mt-12 pb-12">

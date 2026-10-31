@@ -1,4 +1,6 @@
 export const CONTACT = "Fantomes.PRO@Outlook.fr";
+// Lien du portail de résiliation Stripe (mode TEST). À remplacer par le lien du mode réel à la mise en production.
+export const PORTAIL = "https://billing.stripe.com/p/login/test_28E3cufFGg8d3Pn8VC1kA00";
 export const EDITEUR = {
   nom: "Kevin Gobrecht",
   statut: "entrepreneur individuel (micro-entrepreneur)",

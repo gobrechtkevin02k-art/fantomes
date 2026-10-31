@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CONTACT, EDITEUR } from "@/lib/offres";
+import { CONTACT, EDITEUR, PORTAIL } from "@/lib/offres";
 
 export default function Pied() {
   return (
@@ -8,6 +8,7 @@ export default function Pied() {
         <Link href="/mentions-legales" className="py-1 underline underline-offset-4">Mentions légales</Link>
         <Link href="/cgv" className="py-1 underline underline-offset-4">CGV</Link>
         <Link href="/confidentialite" className="py-1 underline underline-offset-4">Confidentialité</Link>
+        <a href={PORTAIL} className="py-1 underline underline-offset-4">Gérer mon abonnement</a>
       </nav>
       <p className="mt-4">
         Fantômes, édité par {EDITEUR.nom}, {EDITEUR.statut}. Contact : {CONTACT}

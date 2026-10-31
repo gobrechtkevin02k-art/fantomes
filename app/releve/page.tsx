@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { PORTAIL } from "@/lib/offres";
 import { lettre } from "@/lib/lettre";
 import { detecter, exemple, lireReleve, type Prelevement } from "@/lib/detect";
 
@@ -122,6 +123,7 @@ export default function Releve() {
             <input value={adresse} onChange={(e) => setAdresse(e.target.value)} placeholder="Ton adresse postale" autoComplete="street-address" className="mt-3 w-full border-2 border-encre bg-creme p-3" />
             <p className="mt-3 text-base">Le nom du service vient de ton relevé : corrige-le dans la lettre si besoin. Ajoute ton numéro de client là où c'est indiqué. Si tu as souscrit en ligne, regarde aussi dans ton espace client : la résiliation s'y fait souvent en quelques clics.</p>
           </div>
+          <p className="text-base"><a href={PORTAIL} className="underline underline-offset-4">Gérer ou résilier mon abonnement Fantômes</a></p>
         </section>
       )}
 
