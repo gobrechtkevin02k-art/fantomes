@@ -20,6 +20,7 @@ export default function Releve() {
   const [cibles, setCibles] = useState<Set<string>>(new Set());
   const [nom, setNom] = useState("");
   const [adresse, setAdresse] = useState("");
+  const [forces, setForces] = useState<Set<string>>(new Set());
   const [ouvert, setOuvert] = useState<string | null>(null);
   const [copie, setCopie] = useState<string | null>(null);
 
@@ -134,7 +135,15 @@ export default function Releve() {
               </span>
               <span className="chiffre font-serif text-2xl font-extrabold text-braise">{eur(p.annuel)} €<span className="text-sm font-normal text-encre"> /an</span></span>
             </div>
-            {acces && (
+            {acces && p.essentiel && !forces.has(p.nom) && (
+              <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-base">
+                <span className="font-semibold">Probablement indispensable</span>
+                <button onClick={() => setForces((f) => new Set(f).add(p.nom))} className="py-1 underline underline-offset-4">
+                  Je veux quand même la résilier
+                </button>
+              </div>
+            )}
+            {acces && !(p.essentiel && !forces.has(p.nom)) && (
               <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
                 <label className="flex items-center gap-2 py-1">
                   <input type="checkbox" className="h-6 w-6 accent-braise" checked={cibles.has(p.nom)} onChange={() => basculer(p.nom)} />

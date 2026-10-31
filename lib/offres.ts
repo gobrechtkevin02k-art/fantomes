@@ -1,4 +1,10 @@
-export const CONTACT = "[À COMPLÉTER : email]";
+export const CONTACT = "Fantomes.PRO@Outlook.fr";
+export const EDITEUR = {
+  nom: "Kevin Gobrecht",
+  statut: "entrepreneur individuel (micro-entrepreneur)",
+  siret: "952 144 707 00017",
+  adresse: "175 B rue Georges Mandel, 02000 Laon",
+};
 
 export type Plan = "unique" | "mensuel" | "annuel";
 

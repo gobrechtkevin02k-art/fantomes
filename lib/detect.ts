@@ -1,4 +1,4 @@
-export type Prelevement = { nom: string; mensuel: number; annuel: number; dernier: string; actif: boolean };
+export type Prelevement = { nom: string; mensuel: number; annuel: number; dernier: string; actif: boolean; essentiel: boolean };
 type Ligne = { date: string; libelle: string; montant: number };
 
 const sansAccent = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -78,6 +78,7 @@ function cle(lib: string): string {
   return s.split(" ").filter((w) => w.length > 1).slice(0, 2).join(" ");
 }
 
+const ESSENTIEL = /\b(LOYER|BAIL|AGENCE|IMMOBILIER|SYNDIC|COPRO|ASSURANCE|ASSUR|MUTUELLE|MAIF|MACIF|MAAF|AXA|ALLIANZ|GROUPAMA|CREDIT|PRET|EMPRUNT|ECHEANCE|EDF|ENGIE|ENERGIE|ELECTRICITE|GAZ|EAU|IMPOT|IMPOTS|DGFIP|TRESOR|URSSAF|CAF|CPAM|CRECHE|CANTINE)\b/;
 const mediane = (a: number[]) => { const s = [...a].sort((x, y) => x - y); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 const jours = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
 
@@ -107,6 +108,7 @@ export function detecter(lignes: Ligne[]): Prelevement[] {
       nom: k.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase()),
       mensuel: med, annuel: med * 12, dernier,
       actif: jours(dernier, fin) <= 45,
+      essentiel: ESSENTIEL.test(k),
     });
   }
   return out.filter((p) => p.actif).sort((a, b) => b.annuel - a.annuel);

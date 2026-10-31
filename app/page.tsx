@@ -14,7 +14,7 @@ const benefices = [
 
 export default function Accueil() {
   return (
-    <div className="pb-28 md:pb-0">
+    <div className="">
       <main className="mx-auto max-w-2xl px-6 pt-10 md:pt-20">
         <p className="font-serif text-xl font-semibold">Fantômes</p>
 
@@ -69,17 +69,6 @@ export default function Accueil() {
           </Link>
         </section>
       </main>
-
-      <footer className="mx-auto mt-20 max-w-2xl border-t border-encre/20 px-6 py-8 text-sm">
-        <p className="font-semibold">Mentions légales</p>
-        <p className="mt-2">
-          Éditeur : [À COMPLÉTER : nom ou raison sociale], entrepreneur individuel, SIRET [À COMPLÉTER]<br />
-          Adresse : [À COMPLÉTER]<br />
-          Contact : [À COMPLÉTER : email]<br />
-          Hébergeur : Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis
-        </p>
-        <p className="mt-4">CGV et politique de confidentialité : à venir avant l'ouverture des paiements.</p>
-      </footer>
 
       <div className="fixed inset-x-0 bottom-0 border-t-2 border-encre bg-creme p-3 md:hidden">
         <Link href="/commencer" className="flex w-full items-center justify-center bg-braise px-6 py-4 text-xl font-extrabold text-encre">
