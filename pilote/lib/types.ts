@@ -143,6 +143,8 @@ export interface Pari {
   gain?: number; // montant total retourné (mise incluse) une fois réglé
   regleLe?: string;
   auto?: boolean; // réglé automatiquement via les résultats
+  miseConseillee?: number; // mise de la gestion de bankroll, avant décision du conseiller
+  boost?: number; // multiplicateur décidé par le conseiller (1 = conseil de gestion)
   demo?: boolean; // pari enregistré pendant le mode démo
   note?: string;
 }
@@ -158,6 +160,17 @@ export interface Mouvement {
 }
 
 export type Profil = "prudent" | "equilibre" | "offensif";
+
+export interface ReglagesConseiller {
+  conviction: boolean; // le conseiller peut monter la mise quand l'indice et la cote le justifient
+  boostMax: number; // multiplicateur maximum de la mise de gestion (toujours sous le plafond de sécurité)
+  attendreCompos: boolean; // football : attendre les compositions officielles avant de jouer
+  combineDuJour: boolean; // ajouter le meilleur combiné « Objectif cote » au plan du jour
+  analyseAuto: boolean; // afficher automatiquement l'analyse complète de l'IA
+  modeSimple: boolean; // interface épurée : lire et cliquer
+  heureRecap: number; // heure du récapitulatif du matin (0-23)
+  fuseau: string; // fuseau horaire IANA
+}
 
 export interface Reglages {
   bankrollInitiale: number;
@@ -176,12 +189,35 @@ export interface Reglages {
   objectifCote: { cible: number; horizonJours: number; jambesMax: number; coteJambeMax: number; confianceMin: number };
   jackpot: { coteMin: number; cibleCombo: number; misePct: number };
   pause: string | null; // date de fin d'une pause volontaire
+  conseiller: ReglagesConseiller;
 }
 
 export interface EtatApp {
   version: 1;
+  profilId: string; // identifiant anonyme pour la synchronisation et les notifications
   reglages: Reglages;
   paris: Pari[];
   mouvements: Mouvement[];
   onboarding: boolean;
+  derniereVisite: string | null; // pour le récapitulatif « pendant ton absence »
+  majLe: string;
+}
+
+// ---------------------------------------------------------------------------
+// Analyse IA d'un match
+
+export type VerdictIA = "confirmer" | "prudence" | "eviter";
+
+export interface AnalyseIA {
+  verdict: VerdictIA;
+  resume: string;
+  pointsForts: string[];
+  pointsFaibles: string[];
+  infosCles: string[];
+  avisMise: string;
+  attendreCompositions: boolean;
+  confianceAnalyste: number;
+  sources: { titre: string; url: string }[];
+  genereLe: string;
+  modele: string;
 }

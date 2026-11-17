@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { StoreProvider } from "@/lib/store";
 import { DonneesProvider } from "@/lib/donnees";
+import { AutonomieProvider } from "@/lib/autonomie";
 import Shell from "@/components/Shell";
 import "./globals.css";
 
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
   applicationName: "Pilote",
   robots: { index: false, follow: false },
   appleWebApp: { capable: true, title: "Pilote", statusBarStyle: "black-translucent" },
+  icons: { apple: "/icones/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#090c11", viewportFit: "cover" };
@@ -20,7 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <StoreProvider>
           <DonneesProvider>
-            <Shell>{children}</Shell>
+            <AutonomieProvider>
+              <Shell>{children}</Shell>
+            </AutonomieProvider>
           </DonneesProvider>
         </StoreProvider>
       </body>

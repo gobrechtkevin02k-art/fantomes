@@ -3,12 +3,48 @@
 // Récupération des cotes et des résultats, calculs dérivés partagés par toutes les pages.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { OddsResponse, Quota, ScoresResponse, Selection, SportEvent } from "./types";
+import type { AnalyseIA, OddsResponse, Quota, ScoresResponse, Selection, SportEvent } from "./types";
 import { useStore } from "./store";
 import { construireSelections } from "./engine/valeur";
 import { reglerParis } from "./engine/reglement";
 import { calculerBankroll, projection, protections } from "./engine/bankroll";
 import type { ContexteMise } from "./engine/mise";
+import { planDuJour, type MouvementCote } from "./engine/conseiller";
+
+const CLE_MOUVEMENTS = "pilote:cotes-vues:v1";
+const CLE_ANALYSES = "pilote:analyses:v1";
+const TTL_ANALYSE = 3 * 3_600_000;
+
+export interface Statut {
+  cotes: "live" | "demo";
+  ia: boolean;
+  modeleIA: string;
+  stockage: "redis" | "fichier" | "memoire";
+  push: boolean;
+  cron: boolean;
+}
+
+export type EtatAnalyse = { etat: "chargement" } | { etat: "ok"; analyse: AnalyseIA } | { etat: "erreur"; erreur: string };
+
+interface MouvementStocke extends MouvementCote {
+  commence: string;
+}
+
+function lireJson<T>(cle: string, defaut: T): T {
+  try {
+    const brut = localStorage.getItem(cle);
+    return brut ? (JSON.parse(brut) as T) : defaut;
+  } catch {
+    return defaut;
+  }
+}
+function ecrireJson(cle: string, v: unknown) {
+  try {
+    localStorage.setItem(cle, JSON.stringify(v));
+  } catch {
+    /* stockage plein ou bloqué */
+  }
+}
 
 const CLE_CACHE = "pilote:cotes:v1";
 const TTL_CLIENT = 30 * 60_000;
@@ -33,6 +69,10 @@ interface ContexteDonnees {
   verifierResultats: () => Promise<number>;
   toasts: Toast[];
   notifier: (texte: string, ton?: Toast["ton"]) => void;
+  statut: Statut | null;
+  mouvements: Record<string, MouvementCote>;
+  analyses: Record<string, EtatAnalyse>;
+  demanderAnalyse: (s: Selection) => Promise<void>;
 }
 
 const Ctx = createContext<ContexteDonnees | null>(null);
@@ -50,6 +90,21 @@ export function DonneesProvider({ children }: { children: ReactNode }) {
   const [maintenant, setMaintenant] = useState(() => Date.now());
   const [toasts, setToasts] = useState<Toast[]>([]);
   const resultatsVerifies = useRef(false);
+  const [statut, setStatut] = useState<Statut | null>(null);
+  const [mouvements, setMouvements] = useState<Record<string, MouvementStocke>>({});
+  const [analyses, setAnalyses] = useState<Record<string, EtatAnalyse>>({});
+
+  useEffect(() => {
+    fetch("/api/statut", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: Statut) => setStatut(d))
+      .catch(() => {});
+    setMouvements(lireJson<Record<string, MouvementStocke>>(CLE_MOUVEMENTS, {}));
+    const cache = lireJson<Record<string, AnalyseIA>>(CLE_ANALYSES, {});
+    const frais: Record<string, EtatAnalyse> = {};
+    for (const [id, a] of Object.entries(cache)) if (Date.now() - Date.parse(a.genereLe) < TTL_ANALYSE) frais[id] = { etat: "ok", analyse: a };
+    setAnalyses(frais);
+  }, []);
 
   const { sports, marches } = etat.reglages;
   const cle = `${[...sports].sort().join(",")}|${[...marches].sort().join(",")}`;
@@ -143,6 +198,65 @@ export function DonneesProvider({ children }: { children: ReactNode }) {
   const events = useMemo(() => data?.events ?? [], [data]);
   const selections = useMemo(() => construireSelections(events, { maintenant }), [events, maintenant]);
 
+  // Mémorise la première cote vue pour chaque sélection, afin de suivre son évolution dans la journée.
+  useEffect(() => {
+    if (!selections.length) return;
+    setMouvements((prev) => {
+      const now = Date.now();
+      const suivant: Record<string, MouvementStocke> = {};
+      for (const [id, m] of Object.entries(prev)) if (Date.parse(m.commence) > now - 86_400_000) suivant[id] = m;
+      let change = Object.keys(suivant).length !== Object.keys(prev).length;
+      for (const s of selections) {
+        if (!suivant[s.id]) {
+          suivant[s.id] = { premiere: s.odds, tPremiere: new Date(now).toISOString(), commence: s.commence };
+          change = true;
+        }
+      }
+      if (!change) return prev;
+      ecrireJson(CLE_MOUVEMENTS, suivant);
+      return suivant;
+    });
+  }, [selections]);
+
+  const demanderAnalyse = useCallback(
+    async (s: Selection) => {
+      setAnalyses((a) => ({ ...a, [s.id]: { etat: "chargement" } }));
+      const m = mouvements[s.id];
+      const variation = m && Math.abs(s.odds - m.premiere) >= 0.01 ? `cote passée de ${m.premiere.toFixed(2)} à ${s.odds.toFixed(2)} depuis ${new Date(m.tPremiere).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}` : undefined;
+      try {
+        const res = await fetch("/api/analyse", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: s.id,
+            sport: s.sportKey.split("_")[0],
+            competition: s.sportTitle,
+            debut: s.commence,
+            domicile: s.home,
+            exterieur: s.away,
+            selection: s.label,
+            coteWinamax: s.odds,
+            coteJuste: s.fairOdds,
+            avantage: s.edge,
+            confiance: s.confidence,
+            bookmakers: s.books,
+            ...(variation ? { mouvement: variation } : {}),
+          }),
+        });
+        const d = (await res.json()) as { analyse?: AnalyseIA; erreur?: string };
+        if (!res.ok || !d.analyse) throw new Error(d.erreur ?? `Erreur ${res.status}`);
+        const analyse = d.analyse;
+        setAnalyses((a) => ({ ...a, [s.id]: { etat: "ok", analyse } }));
+        const cache = lireJson<Record<string, AnalyseIA>>(CLE_ANALYSES, {});
+        for (const [id, x] of Object.entries(cache)) if (Date.now() - Date.parse(x.genereLe) > TTL_ANALYSE) delete cache[id];
+        ecrireJson(CLE_ANALYSES, { ...cache, [s.id]: analyse });
+      } catch (e) {
+        setAnalyses((a) => ({ ...a, [s.id]: { etat: "erreur", erreur: (e as Error).message || "Analyse impossible." } }));
+      }
+    },
+    [mouvements],
+  );
+
   const valeur = useMemo<ContexteDonnees>(
     () => ({
       source: data?.source ?? null,
@@ -158,8 +272,12 @@ export function DonneesProvider({ children }: { children: ReactNode }) {
       verifierResultats,
       toasts,
       notifier,
+      statut,
+      mouvements,
+      analyses,
+      demanderAnalyse,
     }),
-    [data, events, selections, chargement, erreur, maintenant, rafraichir, verifierResultats, toasts, notifier],
+    [data, events, selections, chargement, erreur, maintenant, rafraichir, verifierResultats, toasts, notifier, statut, mouvements, analyses, demanderAnalyse],
   );
   return <Ctx.Provider value={valeur}>{children}</Ctx.Provider>;
 }
@@ -181,4 +299,16 @@ export function useCalculs() {
     const proj = projection(etat.reglages, etat.paris, bk, maintenant);
     return { bk, prot, ctx, proj };
   }, [etat, maintenant]);
+}
+
+/** Le plan du jour du conseiller, recalculé à chaque changement de cotes, d'analyses ou de bankroll. */
+export function usePlan() {
+  const { etat } = useStore();
+  const { selections, maintenant, mouvements, analyses } = useDonnees();
+  const { ctx } = useCalculs();
+  return useMemo(() => {
+    const ok: Record<string, AnalyseIA> = {};
+    for (const [id, a] of Object.entries(analyses)) if (a.etat === "ok") ok[id] = a.analyse;
+    return planDuJour(selections, ctx, etat.paris, maintenant, { mouvements, analyses: ok });
+  }, [selections, ctx, etat.paris, maintenant, mouvements, analyses]);
 }

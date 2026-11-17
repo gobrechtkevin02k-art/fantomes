@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { MarketKey, Mode, Profil, SportInfo } from "@/lib/types";
 import { useStore } from "@/lib/store";
+import { useAutonomie } from "@/lib/autonomie";
+import type { EtatApp, ReglagesConseiller } from "@/lib/types";
 import { useCalculs, useDonnees } from "@/lib/donnees";
 import { FRACTION_KELLY, LIBELLE_PROFIL, MISE_MAX_PCT } from "@/lib/engine/mise";
 import { MODES } from "@/lib/engine/bankroll";
@@ -59,7 +61,11 @@ const MARCHES: { k: MarketKey; l: string; d: string }[] = [
 
 export default function Reglages() {
   const { etat, majReglages, remplacer, reinitialiser, ajouterMouvement } = useStore();
-  const { source, quota, majLe, erreursApi, rafraichir, notifier } = useDonnees();
+  const { source, quota, majLe, erreursApi, rafraichir, notifier, statut } = useDonnees();
+  const { notifications, activerNotifications, desactiverNotifications, testerNotification } = useAutonomie();
+  const [code, setCode] = useState("");
+  const cs = etat.reglages.conseiller;
+  const majConseiller = (c: Partial<ReglagesConseiller>) => majReglages({ conseiller: { ...etat.reglages.conseiller, ...c } });
   const { bk } = useCalculs();
   const r = etat.reglages;
   const [alloc, setAlloc] = useState<Record<Mode, number>>(r.allocation);
@@ -95,6 +101,139 @@ export default function Reglages() {
         <h1 className="text-xl font-bold tracking-tight">Réglages</h1>
         <p className="text-[14px] text-doux">Tout est enregistré sur cet appareil. Pense à exporter une sauvegarde de temps en temps.</p>
       </div>
+
+      <Carte accent="#34d399">
+        <Titre sous="Comment ton conseiller décide et te parle.">Ton conseiller</Titre>
+        <div className="divide-y divide-ligne">
+          {(
+            [
+              ["modeSimple", "Mode simple", "Interface épurée : tu lis et tu cliques. Les chiffres détaillés restent accessibles d'un geste."],
+              ["conviction", "Le conseiller peut relever les mises", "Quand l'indice de confiance et la cote sont exceptionnels, il mise plus que la gestion de bankroll, sans jamais dépasser le plafond de sécurité de ton profil."],
+              ["attendreCompos", "Attendre les compositions (football)", "Il programme les paris de foot environ une heure avant le match, une fois les compositions officielles connues, sauf si la cote risque de baisser."],
+              ["combineDuJour", "Combiné du jour", "Ajoute au plan le combiné le plus sûr pour ta cote cible du mode Objectif cote."],
+              ["analyseAuto", "Afficher automatiquement l'analyse complète de l'IA", "Sinon, un bouton « Voir l'analyse complète » te laisse l'ouvrir quand tu veux. Chaque analyse a un coût d'API."],
+            ] as [keyof ReglagesConseiller, string, string][]
+          ).map(([k, l, d]) => (
+            <div key={k} className="flex items-start justify-between gap-4 py-3 first:pt-0">
+              <div>
+                <div className="text-[14px] font-medium">{l}</div>
+                <div className="text-[12px] leading-relaxed text-doux">{d}</div>
+              </div>
+              <Interrupteur actif={!!cs[k]} label={l} onChange={(v) => majConseiller({ [k]: v })} />
+            </div>
+          ))}
+        </div>
+        {cs.conviction && (
+          <div className="mt-2 border-t border-ligne pt-3">
+            <div className="mb-2 text-[13px] font-medium text-doux">Mise relevée au maximum de</div>
+            <div className="flex gap-2">
+              {[1.25, 1.5, 2].map((b) => (
+                <button
+                  key={b}
+                  onClick={() => majConseiller({ boostMax: b })}
+                  className={cx("num min-h-10 flex-1 rounded-xl border text-[14px] font-semibold", cs.boostMax === b ? "border-texte bg-texte text-fond" : "border-ligne bg-surface-2")}
+                >
+                  ×{String(b).replace(".", ",")}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {statut && !statut.ia && <p className="mt-3 text-[12px] text-faible">Analyse IA non activée sur ce serveur : ajoute la variable ANTHROPIC_API_KEY pour l&apos;activer.</p>}
+      </Carte>
+
+      <Carte>
+        <Titre sous="Le bilan de la nuit le matin, puis un rappel à chaque heure de jeu.">Notifications</Titre>
+        <div className="space-y-3 text-[14px]">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-doux">
+              {
+                {
+                  chargement: "Vérification…",
+                  non_supporte: "Ce navigateur ne gère pas les notifications.",
+                  ios_installer: "Sur iPhone : ajoute d'abord Pilote à l'écran d'accueil, puis ouvre-le depuis l'icône.",
+                  serveur_absent: "Le serveur n'a pas encore de clés de notification (VAPID).",
+                  refuse: "Bloquées dans les réglages du navigateur.",
+                  inactif: "Désactivées sur cet appareil.",
+                  actif: "Activées sur cet appareil.",
+                }[notifications]
+              }
+            </span>
+            {notifications === "inactif" && (
+              <Bouton className="min-h-10" couleur="#a78bfa" onClick={activerNotifications}>
+                Activer
+              </Bouton>
+            )}
+          </div>
+          {notifications === "actif" && (
+            <div className="flex flex-wrap gap-2">
+              <Bouton variante="contour" className="min-h-10" onClick={testerNotification}>
+                Envoyer un test
+              </Bouton>
+              <Bouton variante="fantome" className="min-h-10" onClick={desactiverNotifications}>
+                Désactiver
+              </Bouton>
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-3 border-t border-ligne pt-3">
+            <span>Récapitulatif du matin à</span>
+            <select
+              value={cs.heureRecap}
+              onChange={(e) => majConseiller({ heureRecap: Number(e.target.value) })}
+              className="num min-h-10 rounded-xl border border-ligne bg-surface-2 px-3 text-[14px]"
+              aria-label="Heure du récapitulatif"
+            >
+              {[6, 7, 8, 9, 10].map((h) => (
+                <option key={h} value={h}>
+                  {h}h00
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="text-[12px] text-faible">
+            Fuseau : {cs.fuseau}. Le récap n&apos;est envoyé que si tu n&apos;as pas déjà ouvert l&apos;appli ce matin.
+            {statut && !statut.cron && " Pour les notifications appli fermée, le serveur doit être appelé toutes les 15 minutes (voir le README)."}
+          </p>
+        </div>
+      </Carte>
+
+      <Carte>
+        <Titre sous="Pour retrouver tes données sur un autre appareil et permettre à l'agent de travailler appli fermée.">Synchronisation</Titre>
+        {statut?.stockage === "memoire" ? (
+          <p className="text-[13px] text-doux">Pas de stockage serveur durable : ajoute une base Upstash Redis (gratuite) pour activer la synchronisation et les notifications appli fermée.</p>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <div className="mb-1 text-[13px] text-doux">Ton code personnel (garde-le secret)</div>
+              <div className="flex items-center gap-2">
+                <code className="num min-w-0 flex-1 truncate rounded-xl bg-surface-2 px-3 py-2.5 text-[13px]">{etat.profilId}</code>
+                <Bouton variante="contour" className="min-h-10" onClick={() => navigator.clipboard?.writeText(etat.profilId).then(() => notifier("Code copié.", "info"))}>
+                  Copier
+                </Bouton>
+              </div>
+            </div>
+            <div className="flex items-end gap-2">
+              <Champ className="flex-1" label="Reprendre depuis un autre appareil" placeholder="Colle ton code ici" value={code} onChange={(e) => setCode(e.target.value.trim())} />
+              <Bouton
+                variante="contour"
+                disabled={code.length < 8}
+                onClick={async () => {
+                  const res = await fetch(`/api/sync?id=${encodeURIComponent(code)}`);
+                  const d = (await res.json()) as { etat?: EtatApp; erreur?: string };
+                  if (!d.etat) return notifier(d.erreur ?? "Code introuvable.", "alerte");
+                  if (confirm("Remplacer les données de cet appareil par celles de ce code ?")) {
+                    remplacer(d.etat);
+                    setCode("");
+                    notifier("Données récupérées.", "succes");
+                  }
+                }}
+              >
+                Récupérer
+              </Bouton>
+            </div>
+          </div>
+        )}
+      </Carte>
 
       <Carte>
         <Titre sous="Point de départ de tous les calculs. Les dépôts et retraits se gèrent dans Suivi.">Bankroll</Titre>

@@ -14,6 +14,29 @@ Assistant de paris sportifs pour Winamax : il compare chaque cote Winamax au jus
 
 Chaque gamme mise uniquement dans **sa poche** (par défaut 80 / 15 / 5 %) : le fun ne peut pas manger la bankroll sérieuse.
 
+## Le conseiller (l'agent)
+
+Le conseiller prend les décisions finales et les explique en français, à la première personne. Il suffit de lire et de cliquer.
+
+- **Plan du jour en sessions horaires.** Par exemple : « 1 pari tout de suite, 2 à 18h55 après les compositions ». Chaque session se valide en **un clic** : les paris sont enregistrés, Winamax s'ouvre et un ticket à cocher liste exactement quoi reproduire.
+- **Il peut relever la mise.** Quand l'indice dépasse 85 et que la cote dépasse le juste prix d'au moins 4 %, il mise jusqu'à ×1,5 (réglable : ×1,25, ×1,5 ou ×2) le conseil de gestion de bankroll et le dit : « J'ai pris la décision de monter la mise à 12,60 € au lieu des 8,40 € prévus… ». Il ne dépasse **jamais** le plafond de sécurité du profil, ni pendant un stop-loss, ni en mode prudence.
+- **Il choisit le moment.** Au football, il attend les compositions officielles (environ une heure avant le match), sauf si la cote est si généreuse qu'elle risque d'être corrigée. Un match lointain est réévalué le jour même.
+- **Il sait dire non.** « Aujourd'hui, nous n'avons pas d'indice de confiance assez élevé pour jouer. Voyons demain. »
+- **Il suit les cotes.** « La cote grimpe (2,05 → 2,20 depuis 9h05) ».
+- **Récapitulatif.** À l'ouverture : bilan depuis la dernière visite (« Cette nuit : 2 paris gagnés sur 3, +14,00 € »).
+- **Analyste IA (facultatif).** Avec une clé Claude, un bouton « Voir l'analyse complète » (ou l'affichage automatique, au choix dans les réglages) lance une recherche web sur les compositions, absences et le contexte. Le verdict s'applique au plan : *confirmer*, *prudence* (mise ÷ 2) ou *éviter* (le pari est retiré). L'IA ne peut jamais **augmenter** une mise.
+- **Mode simple** pour les débutants (activé par défaut) : les chiffres détaillés restent à un geste.
+
+### Notifications et agent autonome
+
+Une fois les notifications activées (Réglages → Notifications), un agent côté serveur, appelé toutes les 15 minutes :
+- à **7h** (heure réglable), si l'appli n'a pas encore été ouverte, envoie le bilan de la nuit et le plan du jour ;
+- à **chaque heure de jeu**, envoie « ⏰ 18h55 : c'est l'heure de jouer — 2 paris prêts pour 8,40 € ». La notification ouvre directement la session, il ne reste qu'à toucher **Valider**.
+
+Sur iPhone, les notifications web demandent d'abord d'ajouter Pilote à l'écran d'accueil (Partager → « Sur l'écran d'accueil »).
+
+**Pourquoi le clic final reste chez Winamax :** Winamax n'a pas d'API publique pour parier. Un robot qui se connecterait avec tes identifiants mettrait ton compte en danger. Pilote fait tout le reste : choix, mise, heure, enregistrement, suivi et résultats.
+
 ## Comment ça marche
 
 1. **Juste prix.** Pour chaque issue, Pilote retire la marge de chaque bookmaker de référence (méthode « puissance », qui corrige le biais favori / outsider) puis fait une moyenne pondérée en log-cote. Pinnacle et Betfair pèsent plus lourd.
@@ -42,10 +65,16 @@ npm test                     # tests du moteur
 ## Mettre en ligne sur Vercel
 
 1. Sur Vercel, crée un **nouveau projet** à partir de ce dépôt et règle **Root Directory** sur `pilote`.
-2. Ajoute les variables d'environnement :
+2. Ajoute les variables d'environnement (toutes listées dans `.env.example`) :
    - `ODDS_API_KEY` : ta clé The Odds API (500 crédits gratuits par mois) ;
-   - `APP_PASSWORD` : un mot de passe, pour que personne d'autre n'utilise ton quota (fortement conseillé).
+   - `APP_PASSWORD` : un mot de passe, pour que personne d'autre n'utilise ton quota (fortement conseillé) ;
+   - `ANTHROPIC_API_KEY` *(facultatif)* : active l'analyste IA ;
+   - pour les notifications : `VAPID_PUBLIC_KEY` et `VAPID_PRIVATE_KEY` (génère-les avec `npm run vapid`), `VAPID_SUBJECT` (ex. `mailto:toi@exemple.fr`), `CRON_SECRET` (une longue chaîne au hasard) ;
+   - une base **Upstash Redis** gratuite (Vercel → Storage → Upstash) : elle ajoute `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (ou `KV_REST_API_URL` / `KV_REST_API_TOKEN`). Sans elle, pas de synchronisation ni de notifications appli fermée.
 3. Déploie, puis ouvre l'URL sur ton téléphone et « Ajouter à l'écran d'accueil ».
+4. **Réveil de l'agent.** `vercel.json` déclare un passage quotidien (vers 7h, heure de Paris en hiver), c'est le maximum autorisé par l'offre gratuite de Vercel. Pour les notifications à l'heure de jeu, crée une tâche gratuite sur [cron-job.org](https://cron-job.org) qui appelle toutes les 15 minutes `https://ton-site.vercel.app/api/cron` avec l'en-tête `Authorization: Bearer <CRON_SECRET>` (ou l'URL `…/api/cron?cle=<CRON_SECRET>`).
+
+**Coûts à prévoir.** The Odds API : 500 crédits gratuits par mois, juste pour un usage léger ; avec l'agent qui prépare le plan chaque matin, l'offre à 20 000 crédits est plus confortable. Analyste IA : chaque analyse (modèle Claude + quelques recherches web) coûte de l'ordre de quelques centimes ; elles sont gardées en cache 3 h et limitées à 30 par heure (`ANALYSE_MAX_HEURE`).
 
 **Quota :** une actualisation coûte (nombre de compétitions × nombre de marchés) crédits. Les cotes sont mises en cache 10 min côté serveur et 30 min dans le navigateur ; le nombre de crédits restants s'affiche dans les réglages.
 
@@ -53,7 +82,10 @@ npm test                     # tests du moteur
 
 ```
 lib/engine/   moteur pur et testé : proba, valeur (juste prix + indice), mise (Kelly + garde-fous),
-              combos (programmation dynamique), modes, bankroll (poches, stats, projection), reglement
+              combos (programmation dynamique), modes, bankroll (poches, stats, projection), reglement,
+              conseiller (décisions, heures de jeu, plan du jour, récap), temps (fuseaux horaires)
+lib/serveur/  analyste (Claude + recherche web), agent (tâche du cron), push (Web Push), stockage
+lib/autonomie.tsx  service worker, notifications, synchronisation, validation en un clic
 lib/oddsapi.ts  client serveur The Odds API (la clé ne quitte jamais le serveur)
 lib/demo.ts     générateur de matchs et de cotes réalistes pour le mode démo
 lib/store.tsx   état local (localStorage) ; lib/donnees.tsx : cotes, résultats, calculs dérivés

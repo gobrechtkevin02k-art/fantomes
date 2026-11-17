@@ -7,7 +7,8 @@ import { combosJackpot, simplesJackpot } from "@/lib/engine/modes";
 import { miseJackpot } from "@/lib/engine/mise";
 import { cote, dateMatch, eur, pctSigne } from "@/lib/format";
 import { emojiSport } from "@/lib/sports";
-import { CarteCombo, ModalPari, lienWinamax, type ProjetPari } from "@/components/Paris";
+import { CarteCombo, ModalPari, type ProjetPari } from "@/components/Paris";
+import { lienWinamax } from "@/lib/winamax";
 import { Bouton, Carte, Jauge, Puces, Titre, Vide } from "@/components/ui";
 import { IcDiamant, IcExterne, IcInfo } from "@/components/Icones";
 

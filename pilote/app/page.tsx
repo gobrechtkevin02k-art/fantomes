@@ -1,16 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { useCalculs, useDonnees } from "@/lib/donnees";
-import { planClassique } from "@/lib/engine/mise";
 import { statistiques } from "@/lib/engine/bankroll";
-import { cote, dateLongue, dateMatch, eur, eurSigne, pct, pctSigne } from "@/lib/format";
-import { emojiSport } from "@/lib/sports";
+import { cote, dateLongue, eur, eurSigne, pct, pctSigne } from "@/lib/format";
 import Graphique from "@/components/Graphique";
-import { ModalPari, type ProjetPari } from "@/components/Paris";
-import { Badge, Barre, Bouton, COULEUR_MODE, Carte, Jauge, NOM_MODE, Stat, Titre, Vide } from "@/components/ui";
+import CarteConseiller from "@/components/Conseiller";
+import { Badge, Barre, Bouton, COULEUR_MODE, Carte, NOM_MODE, Stat, Titre } from "@/components/ui";
 import { IcAlerte, IcBouclier, IcChevron, IcCible, IcDiamant, IcEclair, IcRafraichir } from "@/components/Icones";
 import type { Mode } from "@/lib/types";
 
@@ -69,16 +67,21 @@ function Objectif() {
 
 export default function Accueil() {
   const { etat } = useStore();
-  const { selections, chargement, erreur, source, verifierResultats, notifier, maintenant } = useDonnees();
-  const { bk, prot, ctx } = useCalculs();
-  const [projet, setProjet] = useState<ProjetPari | null>(null);
+  const { source, verifierResultats, notifier, maintenant } = useDonnees();
+  const { bk, prot } = useCalculs();
 
-  const plan = useMemo(() => planClassique(selections, ctx, etat.paris, maintenant).filter((r) => r.mise.mise > 0 && !r.dejaJoue && !r.horsBudget), [selections, ctx, etat.paris, maintenant]);
+  const [sessionCible, setSessionCible] = useState<string | null>(null);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("session");
+    if (id) {
+      setSessionCible(id);
+      window.history.replaceState(null, "", "/");
+    }
+  }, []);
   const stats = useMemo(() => statistiques(etat.paris), [etat.paris]);
   const enCours = etat.paris.filter((p) => p.statut === "en_cours");
   const delta = bk.total - bk.apports;
   const roiBk = bk.apports > 0 ? delta / bk.apports : 0;
-  const totalPlan = plan.slice(0, 5).reduce((s, r) => s + r.mise.mise, 0);
 
   return (
     <div className="space-y-4">
@@ -110,6 +113,8 @@ export default function Accueil() {
           </div>
         </div>
       )}
+
+      <CarteConseiller sessionCible={sessionCible} />
 
       <Carte>
         <div className="flex items-start justify-between gap-3">
@@ -152,55 +157,8 @@ export default function Accueil() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Carte accent="#34d399">
-          <Titre
-            sous={plan.length ? `${plan.length} pari${plan.length > 1 ? "s" : ""} à valeur positive · ${eur(totalPlan)} à miser au total` : "Les meilleures opportunités du mode Classique"}
-            action={
-              <Link href="/classique" className="text-[13px] font-semibold text-classique">
-                Tout voir
-              </Link>
-            }
-          >
-            Le plan du jour
-          </Titre>
-          {chargement && !plan.length ? (
-            <p className="py-6 text-center text-[13px] text-doux">Analyse des cotes en cours…</p>
-          ) : erreur ? (
-            <p className="py-6 text-center text-[13px] text-negatif">{erreur}</p>
-          ) : plan.length === 0 ? (
-            <Vide titre="Rien de rentable pour l'instant">
-              {prot.bloque ? prot.raisons.join(" ") : "Aucune cote Winamax n'est assez au-dessus du juste prix. Ne pas parier est aussi une décision gagnante."}
-            </Vide>
-          ) : (
-            <ul className="-mx-1 divide-y divide-ligne">
-              {plan.slice(0, 5).map(({ selection: s, mise }) => (
-                <li key={s.id}>
-                  <button
-                    className="flex w-full items-center gap-3 rounded-xl px-1 py-2.5 text-left transition hover:bg-surface-2"
-                    onClick={() => setProjet({ mode: "classique", titre: "Classique", jambes: [s], cote: s.odds, mise: mise.mise, confiance: s.confidence, edge: s.edge, proba: s.fairProb })}
-                  >
-                    <Jauge valeur={s.confidence} taille={40} epaisseur={4} />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-[14px] font-semibold">{s.label}</div>
-                      <div className="truncate text-[12px] text-doux">
-                        {emojiSport(s.sportKey)} {s.home} – {s.away} · {dateMatch(s.commence, maintenant)}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="num text-[15px] font-bold text-classique">{eur(mise.mise)}</div>
-                      <div className="num text-[12px] text-doux">
-                        @ {cote(s.odds)} · <span className="text-positif">{pctSigne(s.edge)}</span>
-                      </div>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Carte>
-
+        <Objectif />
         <div className="space-y-4">
-          <Objectif />
           <Carte>
             <Titre
               sous={enCours.length ? `${eur(bk.engageTotal)} engagés` : "Aucun pari en attente"}
@@ -287,7 +245,6 @@ export default function Accueil() {
         </div>
       </Carte>
 
-      <ModalPari projet={projet} onFermer={() => setProjet(null)} />
     </div>
   );
 }

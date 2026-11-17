@@ -16,4 +16,5 @@ export function middleware(req: NextRequest) {
   return new NextResponse("Accès protégé", { status: 401, headers: { "WWW-Authenticate": 'Basic realm="Pilote", charset="UTF-8"' } });
 }
 
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest).*)"] };
+// Le cron a son propre secret ; le service worker et les icônes doivent rester accessibles aux notifications.
+export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|icones/|sw.js|manifest.webmanifest|api/cron).*)"] };

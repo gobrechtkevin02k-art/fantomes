@@ -11,6 +11,7 @@ import { depuis, eur } from "@/lib/format";
 import { IcAccueil, IcBouclier, IcCible, IcDiamant, IcGraphique, IcRafraichir, IcReglages, Logo } from "./Icones";
 import { cx } from "./ui";
 import Onboarding from "./Onboarding";
+import { ModalTicket } from "./Conseiller";
 
 const NAV = [
   { href: "/", label: "Accueil", Icone: IcAccueil, couleur: "#e9eef3" },
@@ -106,6 +107,7 @@ export default function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="mx-auto flex min-h-dvh max-w-6xl">
       <Toasts />
+      <ModalTicket />
       {/* Navigation latérale (ordinateur) */}
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-ligne px-3 py-5 md:flex">
         <Link href="/" className="mb-8 flex items-center gap-2.5 px-2">

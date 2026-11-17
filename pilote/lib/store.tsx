@@ -4,6 +4,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { EtatApp, Mouvement, Pari, Reglages } from "./types";
+import { uid } from "./format";
 import { SPORTS_PAR_DEFAUT } from "./sports";
 
 const CLE = "pilote:etat:v1";
@@ -28,11 +29,29 @@ export function reglagesParDefaut(): Reglages {
     objectifCote: { cible: 10, horizonJours: 7, jambesMax: 8, coteJambeMax: 3.5, confianceMin: 45 },
     jackpot: { coteMin: 20, cibleCombo: 100, misePct: 2 },
     pause: null,
+    conseiller: {
+      conviction: true,
+      boostMax: 1.5,
+      attendreCompos: true,
+      combineDuJour: true,
+      analyseAuto: false,
+      modeSimple: true,
+      heureRecap: 7,
+      fuseau: fuseauNavigateur(),
+    },
   };
 }
 
+function fuseauNavigateur(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Paris";
+  } catch {
+    return "Europe/Paris";
+  }
+}
+
 export function etatInitial(): EtatApp {
-  return { version: 1, reglages: reglagesParDefaut(), paris: [], mouvements: [], onboarding: false };
+  return { version: 1, profilId: uid(), reglages: reglagesParDefaut(), paris: [], mouvements: [], onboarding: false, derniereVisite: null, majLe: new Date().toISOString() };
 }
 
 function fusionner(brut: unknown): EtatApp {
@@ -42,6 +61,9 @@ function fusionner(brut: unknown): EtatApp {
   const r = (e.reglages ?? {}) as Partial<Reglages>;
   return {
     version: 1,
+    profilId: typeof e.profilId === "string" && e.profilId ? e.profilId : base.profilId,
+    derniereVisite: typeof e.derniereVisite === "string" ? e.derniereVisite : null,
+    majLe: typeof e.majLe === "string" ? e.majLe : base.majLe,
     reglages: {
       ...base.reglages,
       ...r,
@@ -49,6 +71,7 @@ function fusionner(brut: unknown): EtatApp {
       classique: { ...base.reglages.classique, ...(r.classique ?? {}) },
       objectifCote: { ...base.reglages.objectifCote, ...(r.objectifCote ?? {}) },
       jackpot: { ...base.reglages.jackpot, ...(r.jackpot ?? {}) },
+      conseiller: { ...base.reglages.conseiller, ...(r.conseiller ?? {}) },
     },
     paris: Array.isArray(e.paris) ? e.paris : [],
     mouvements: Array.isArray(e.mouvements) ? e.mouvements : [],
@@ -56,12 +79,16 @@ function fusionner(brut: unknown): EtatApp {
   };
 }
 
+const horodater = (e: EtatApp): EtatApp => ({ ...e, majLe: new Date().toISOString() });
+
 interface ContexteStore {
   pret: boolean;
   etat: EtatApp;
   majReglages: (r: Partial<Reglages>) => void;
   terminerOnboarding: (r: Partial<Reglages>) => void;
   ajouterPari: (p: Pari) => void;
+  ajouterParis: (ps: Pari[]) => void;
+  marquerVisite: () => void;
   majParis: (ps: Pari[]) => void;
   supprimerPari: (id: string) => void;
   ajouterMouvement: (m: Mouvement) => void;
@@ -112,29 +139,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("storage", f);
   }, []);
 
-  const majReglages = useCallback((r: Partial<Reglages>) => setEtat((e) => ({ ...e, reglages: { ...e.reglages, ...r } })), []);
+  const majReglages = useCallback((r: Partial<Reglages>) => setEtat((e) => horodater({ ...e, reglages: { ...e.reglages, ...r } })), []);
   const terminerOnboarding = useCallback(
-    (r: Partial<Reglages>) => setEtat((e) => ({ ...e, onboarding: true, reglages: { ...e.reglages, ...r, dateDebut: new Date().toISOString() } })),
+    (r: Partial<Reglages>) => setEtat((e) => horodater({ ...e, onboarding: true, derniereVisite: new Date().toISOString(), reglages: { ...e.reglages, ...r, dateDebut: new Date().toISOString() } })),
     [],
   );
-  const ajouterPari = useCallback((p: Pari) => setEtat((e) => ({ ...e, paris: [p, ...e.paris] })), []);
+  const ajouterPari = useCallback((p: Pari) => setEtat((e) => horodater({ ...e, paris: [p, ...e.paris] })), []);
+  const ajouterParis = useCallback((ps: Pari[]) => setEtat((e) => horodater({ ...e, paris: [...ps, ...e.paris] })), []);
   const majParis = useCallback(
     (ps: Pari[]) =>
       setEtat((e) => {
         const m = new Map(ps.map((p) => [p.id, p]));
-        return { ...e, paris: e.paris.map((p) => m.get(p.id) ?? p) };
+        return horodater({ ...e, paris: e.paris.map((p) => m.get(p.id) ?? p) });
       }),
     [],
   );
-  const supprimerPari = useCallback((id: string) => setEtat((e) => ({ ...e, paris: e.paris.filter((p) => p.id !== id) })), []);
-  const ajouterMouvement = useCallback((m: Mouvement) => setEtat((e) => ({ ...e, mouvements: [...e.mouvements, m] })), []);
-  const supprimerMouvement = useCallback((id: string) => setEtat((e) => ({ ...e, mouvements: e.mouvements.filter((m) => m.id !== id) })), []);
+  const supprimerPari = useCallback((id: string) => setEtat((e) => horodater({ ...e, paris: e.paris.filter((p) => p.id !== id) })), []);
+  const ajouterMouvement = useCallback((m: Mouvement) => setEtat((e) => horodater({ ...e, mouvements: [...e.mouvements, m] })), []);
+  const supprimerMouvement = useCallback((id: string) => setEtat((e) => horodater({ ...e, mouvements: e.mouvements.filter((m) => m.id !== id) })), []);
   const remplacer = useCallback((brut: unknown) => setEtat(fusionner(brut)), []);
   const reinitialiser = useCallback(() => setEtat(etatInitial()), []);
+  const marquerVisite = useCallback(() => setEtat((e) => ({ ...e, derniereVisite: new Date().toISOString() })), []);
 
   const valeur = useMemo(
-    () => ({ pret, etat, majReglages, terminerOnboarding, ajouterPari, majParis, supprimerPari, ajouterMouvement, supprimerMouvement, remplacer, reinitialiser }),
-    [pret, etat, majReglages, terminerOnboarding, ajouterPari, majParis, supprimerPari, ajouterMouvement, supprimerMouvement, remplacer, reinitialiser],
+    () => ({ pret, etat, majReglages, terminerOnboarding, ajouterPari, ajouterParis, marquerVisite, majParis, supprimerPari, ajouterMouvement, supprimerMouvement, remplacer, reinitialiser }),
+    [pret, etat, majReglages, terminerOnboarding, ajouterPari, ajouterParis, marquerVisite, majParis, supprimerPari, ajouterMouvement, supprimerMouvement, remplacer, reinitialiser],
   );
   return <Ctx.Provider value={valeur}>{children}</Ctx.Provider>;
 }

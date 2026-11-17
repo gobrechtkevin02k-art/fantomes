@@ -12,20 +12,10 @@ import { cote, dateCourte, dateMatch, eur, pct, pctSigne, uid } from "@/lib/form
 import { emojiSport, nomSport } from "@/lib/sports";
 import { Badge, Barre, Bouton, COULEUR_MODE, Carte, Champ, Jauge, LienBouton, Modal, cx, libelleConfiance } from "./ui";
 import { IcAlerte, IcChevron, IcCopier, IcExterne, IcValider } from "./Icones";
+import { PanneauAnalyse } from "./Conseiller";
+import { lienWinamax, WINAMAX } from "@/lib/winamax";
 
-const WINAMAX = "https://www.winamax.fr/paris-sportifs";
-
-/** Lien vers Winamax : on n'accepte que des liens https vers winamax.fr. */
-export function lienWinamax(lien?: string): string {
-  if (!lien) return WINAMAX;
-  try {
-    const u = new URL(lien);
-    if (u.protocol === "https:" && (u.hostname === "winamax.fr" || u.hostname.endsWith(".winamax.fr"))) return u.toString();
-  } catch {
-    /* lien invalide */
-  }
-  return WINAMAX;
-}
+export { lienWinamax };
 
 function versJambe(s: Selection): Jambe {
   return {
@@ -231,6 +221,8 @@ export function CarteSelection({
   onParier: (p: ProjetPari) => void;
 }) {
   const [details, setDetails] = useState(false);
+  const { etat } = useStore();
+  const simple = etat.reglages.conseiller.modeSimple;
   const couleur = COULEUR_MODE[mode];
   const positif = s.edge > 0;
   return (
@@ -247,6 +239,12 @@ export function CarteSelection({
         {horsBudget && <Badge couleur="#fbbf24">Hors budget du jour</Badge>}
       </div>
 
+      {simple ? (
+        <div className="num mt-2 text-[13px] text-doux">
+          Cote Winamax <span className="text-[15px] font-bold text-texte">{cote(s.odds)}</span>
+          {positif && <span className="text-positif"> · mieux payée que le marché</span>}
+        </div>
+      ) : (
       <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-surface-2 p-3">
         <div>
           <div className="text-[11px] text-doux">Cote Winamax</div>
@@ -263,6 +261,7 @@ export function CarteSelection({
           </div>
         </div>
       </div>
+      )}
 
       <div className="mt-3 flex items-end justify-between gap-3">
         <div>
@@ -294,6 +293,10 @@ export function CarteSelection({
           <Facteurs s={s} />
         </div>
       )}
+
+      <div className="mt-3">
+        <PanneauAnalyse s={s} />
+      </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         <LienBouton href={lienWinamax(s.link)} couleur={couleur}>

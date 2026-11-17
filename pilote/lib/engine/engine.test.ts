@@ -26,6 +26,7 @@ const reglages = (r: Partial<Reglages> = {}): Reglages => ({
   objectifCote: { cible: 10, horizonJours: 7, jambesMax: 8, coteJambeMax: 3.5, confianceMin: 45 },
   jackpot: { coteMin: 20, cibleCombo: 100, misePct: 2 },
   pause: null,
+  conseiller: { conviction: true, boostMax: 1.5, attendreCompos: true, combineDuJour: false, analyseAuto: false, modeSimple: true, heureRecap: 7, fuseau: "Europe/Paris" },
   ...r,
 });
 
