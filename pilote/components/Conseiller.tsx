@@ -16,6 +16,7 @@ import { cote, dansCombien, dateMatch, eur, eurSigne, pct } from "@/lib/format";
 import { emojiSport } from "@/lib/sports";
 import { Badge, Bouton, COULEUR_MODE, Carte, Jauge, LienBouton, Modal, cx } from "./ui";
 import { IcAlerte, IcChevron, IcCopier, IcEclair, IcExterne, IcValider, Logo } from "./Icones";
+import { Cadenas, Verrou } from "./Offres";
 
 const VERDICTS = {
   confirmer: { l: "Confirmé par l'analyse", c: "#34d399" },
@@ -33,7 +34,7 @@ const domaine = (url: string) => {
 
 /** Analyse complète de l'IA pour une sélection (à la demande, ou automatique selon les réglages). */
 export function PanneauAnalyse({ s, auto = false }: { s: Selection; auto?: boolean }) {
-  const { statut, analyses, demanderAnalyse } = useDonnees();
+  const { statut, analyses, demanderAnalyse, droits } = useDonnees();
   const a = analyses[s.id];
   const [ouvert, setOuvert] = useState(auto);
   const lance = useRef(false);
@@ -46,6 +47,7 @@ export function PanneauAnalyse({ s, auto = false }: { s: Selection; auto?: boole
   }, [auto, statut?.ia, a, s, demanderAnalyse]);
 
   if (!statut?.ia) return null;
+  if (droits.analysesIAParJour <= 0 && !a) return <Verrou test={(d) => d.analysesIAParJour > 0} texte="Analyse complète de l'IA" />;
   if (!a) {
     return (
       <button onClick={() => (setOuvert(true), demanderAnalyse(s))} className="flex items-center gap-1.5 text-[13px] font-semibold text-objectif hover:underline">
@@ -130,7 +132,6 @@ export function PanneauAnalyse({ s, auto = false }: { s: Selection; auto?: boole
 function LigneItem({ it, auto }: { it: ItemPlan; auto: boolean }) {
   const { etat } = useStore();
   const simple = etat.reglages.conseiller.modeSimple;
-  const [ouvert, setOuvert] = useState(false);
   const s = it.selections[0];
   return (
     <li className="py-3">
@@ -138,49 +139,29 @@ function LigneItem({ it, auto }: { it: ItemPlan; auto: boolean }) {
         <Jauge valeur={it.confiance} taille={42} epaisseur={4} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[15px] font-semibold">{it.type === "combine" ? `Combiné ${it.selections.length} matchs` : s.label}</span>
+            <span className="text-[15px] font-semibold">{s.label}</span>
             {it.boost > 1.001 && <Badge couleur="#fbbf24">Mise relevée</Badge>}
-            {it.type === "combine" && <Badge couleur={COULEUR_MODE.objectif}>Objectif cote</Badge>}
           </div>
           <div className="truncate text-[12px] text-doux">
-            {it.type === "combine" ? it.selections.map((j) => j.label).join(" + ") : `${emojiSport(s.sportKey)} ${s.home} – ${s.away} · ${dateMatch(s.commence)}`}
+            {emojiSport(s.sportKey)} {s.home} – {s.away} · {dateMatch(s.commence)}
           </div>
         </div>
         <div className="shrink-0 text-right">
-          <div className="num text-[16px] font-bold" style={{ color: COULEUR_MODE[it.mode] }}>
+          <div className="num text-[16px] font-bold" style={{ color: COULEUR_MODE.classique }}>
             {eur(it.mise)}
           </div>
           <div className="num text-[12px] text-doux">@ {cote(it.cote)}</div>
         </div>
       </div>
       <p className="mt-2 text-[13px] leading-relaxed text-doux">{it.message}</p>
-      {!simple && it.type === "simple" && (
+      {!simple && (
         <p className="num mt-1 text-[11px] text-faible">
           Juste prix {cote(s.fairOdds)} · avantage {pct(s.edge)} · {s.books} bookmakers{it.boost > 1.001 ? ` · gestion : ${eur(it.miseBase)} → ${eur(it.mise)}` : ""}
         </p>
       )}
-      {it.type === "combine" && (
-        <button onClick={() => setOuvert((o) => !o)} className="mt-1.5 flex items-center gap-1 text-[12px] font-medium text-doux hover:text-texte" aria-expanded={ouvert}>
-          <IcChevron className={cx("transition", ouvert && "rotate-90")} /> Détail des {it.selections.length} sélections
-        </button>
-      )}
-      {ouvert && (
-        <ul className="mt-1.5 space-y-1 text-[12px] text-doux">
-          {it.selections.map((j) => (
-            <li key={j.id} className="flex justify-between gap-2">
-              <span className="truncate">
-                {j.label} · {j.home} – {j.away} · {dateMatch(j.commence)}
-              </span>
-              <span className="num shrink-0">{cote(j.odds)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {it.type === "simple" && (
-        <div className="mt-2">
-          <PanneauAnalyse s={s} auto={auto} />
-        </div>
-      )}
+      <div className="mt-2">
+        <PanneauAnalyse s={s} auto={auto} />
+      </div>
     </li>
   );
 }
@@ -285,6 +266,14 @@ function BanniereNotifications() {
   const { notifications, activerNotifications } = useAutonomie();
   const [masque, setMasque] = useState(false);
   if (masque || notifications === "actif" || notifications === "chargement" || notifications === "non_supporte" || notifications === "serveur_absent") return null;
+  if (notifications === "offre") {
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-ligne bg-surface-2/50 p-3 text-[13px]">
+        <span className="text-doux">Récap du matin et rappels à l&apos;heure de jouer : disponibles avec une offre payante.</span>
+        <Verrou test={(d) => d.notifMatin} className="shrink-0" />
+      </div>
+    );
+  }
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-objectif/30 bg-objectif/10 p-3 text-[13px]">
       <IcAlerte className="mt-0.5 shrink-0 text-objectif" />
@@ -405,7 +394,7 @@ function PlusTard({ plan, maintenant }: { plan: Plan; maintenant: number }) {
           {plan.plusTard.map((it) => (
             <div key={it.id} className="rounded-xl border border-ligne p-3 text-[13px]">
               <div className="flex justify-between gap-2">
-                <span className="font-semibold">{it.type === "combine" ? `Combiné ${it.selections.length} matchs` : it.selections[0].label}</span>
+                <span className="font-semibold">{it.selections[0].label}</span>
                 <span className="num text-doux">
                   {eur(it.mise)} @ {cote(it.cote)}
                 </span>
@@ -434,7 +423,7 @@ export default function CarteConseiller({ sessionCible }: { sessionCible?: strin
   const { maintenant, chargement, source, statut } = useDonnees();
   const plan = usePlan();
   const tz = etat.reglages.conseiller.fuseau;
-  const couleurVerdict = plan.verdict === "jouer" ? "#34d399" : plan.verdict === "attendre" ? "#fbbf24" : "#8b97a4";
+  const couleurVerdict = plan.verdict === "jouer" ? "#34d399" : plan.verdict === "attendre" || plan.verdict === "limite" ? "#fbbf24" : "#8b97a4";
 
   return (
     <Carte className="space-y-4">
@@ -473,6 +462,18 @@ export default function CarteConseiller({ sessionCible }: { sessionCible?: strin
         <p className="rounded-xl bg-surface-2 p-3 text-[13px] text-doux">Les cotes ont bougé depuis la notification : voici le plan mis à jour.</p>
       )}
 
+      {plan.verrouilles.length > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-ligne p-3.5">
+          <div className="flex items-center gap-2 text-[13px] text-doux">
+            <Cadenas className="text-base" />
+            <span>
+              {plan.verrouilles.length} autre{plan.verrouilles.length > 1 ? "s" : ""} pari{plan.verrouilles.length > 1 ? "s" : ""} solide{plan.verrouilles.length > 1 ? "s" : ""} aujourd&apos;hui (indice
+              jusqu&apos;à {Math.round(Math.max(...plan.verrouilles.map((i) => i.confiance)))})
+            </span>
+          </div>
+          <Verrou test={(d) => d.parisParJour > plan.limite} className="shrink-0" />
+        </div>
+      )}
       <PlusTard plan={plan} maintenant={maintenant} />
       {statut && !statut.ia && plan.sessions.length > 0 && (
         <p className="text-[12px] text-faible">Astuce : active l&apos;analyste IA (clé ANTHROPIC_API_KEY sur le serveur) pour que je vérifie compositions et absences avant chaque pari.</p>

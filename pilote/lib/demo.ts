@@ -283,8 +283,14 @@ export function scoresDemo(sports: string[], maintenant = Date.now(), joursAvant
   return matchsFenetre(sports, maintenant, joursAvant, 0)
     .filter((m) => Date.parse(m.event.commence) < maintenant)
     .map((m) => {
-      const fini = Date.parse(m.event.commence) + 2.5 * 3_600_000 < maintenant;
+      // Durée réelle d'un match : environ 1 h 55 au football, 2 h 30 au basket, 2 h au tennis.
+      const duree = (m.event.sportKey.startsWith("soccer") ? 115 : m.event.sportKey.startsWith("basketball") ? 150 : 120) * 60_000;
+      const ecoule = maintenant - Date.parse(m.event.commence);
+      const fini = ecoule > duree;
       const [h, a] = m.modele.tirerScore(prng(m.graine ^ 0x9e3779b9));
+      // En cours : une partie du score final, proportionnelle au temps écoulé.
+      const f = fini ? 1 : Math.min(1, ecoule / duree);
+      const part = (x: number) => (m.modele.marches[0].issues.length === 2 && m.event.sportKey.startsWith("tennis") ? 0 : Math.floor(x * f));
       return {
         id: m.event.id,
         sportKey: m.event.sportKey,
@@ -292,7 +298,10 @@ export function scoresDemo(sports: string[], maintenant = Date.now(), joursAvant
         completed: fini,
         home: m.event.home,
         away: m.event.away,
-        scores: fini ? [{ name: m.event.home, score: h }, { name: m.event.away, score: a }] : null,
+        scores: [
+          { name: m.event.home, score: part(h) },
+          { name: m.event.away, score: part(a) },
+        ],
       };
     });
 }

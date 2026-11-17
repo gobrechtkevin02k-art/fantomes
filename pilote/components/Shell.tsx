@@ -8,10 +8,11 @@ import type { ReactNode } from "react";
 import { useStore } from "@/lib/store";
 import { useCalculs, useDonnees } from "@/lib/donnees";
 import { depuis, eur } from "@/lib/format";
-import { IcAccueil, IcBouclier, IcCible, IcDiamant, IcGraphique, IcRafraichir, IcReglages, Logo } from "./Icones";
+import { IcAccueil, IcBouclier, IcCible, IcDiamant, IcEclair, IcGraphique, IcRafraichir, IcReglages, Logo } from "./Icones";
 import { cx } from "./ui";
 import Onboarding from "./Onboarding";
 import { ModalTicket } from "./Conseiller";
+import { Cadenas } from "./Offres";
 
 const NAV = [
   { href: "/", label: "Accueil", Icone: IcAccueil, couleur: "#e9eef3" },
@@ -92,6 +93,8 @@ function Bankroll() {
 
 export default function Shell({ children }: { children: ReactNode }) {
   const { pret, etat } = useStore();
+  const { droits } = useDonnees();
+  const verrouille = (href: string) => (href === "/objectif" && !droits.objectifCote) || (href === "/jackpot" && !droits.jackpot);
   const chemin = usePathname();
   const actif = (href: string) => (href === "/" ? chemin === "/" : chemin.startsWith(href));
 
@@ -115,7 +118,7 @@ export default function Shell({ children }: { children: ReactNode }) {
           <span className="text-[17px] font-bold tracking-tight">Pilote</span>
         </Link>
         <nav className="flex flex-col gap-1">
-          {[...NAV, { href: "/reglages", label: "Réglages", Icone: IcReglages, couleur: "#e9eef3" }].map(({ href, label, Icone, couleur }) => (
+          {[...NAV, { href: "/offres", label: "Offres", Icone: IcEclair, couleur: "#fbbf24" }, { href: "/reglages", label: "Réglages", Icone: IcReglages, couleur: "#e9eef3" }].map(({ href, label, Icone, couleur }) => (
             <Link
               key={href}
               href={href}
@@ -126,6 +129,7 @@ export default function Shell({ children }: { children: ReactNode }) {
             >
               <Icone className="text-lg" style={{ color: actif(href) ? couleur : undefined }} />
               {label}
+              {verrouille(href) && <Cadenas className="ml-auto text-faible" />}
             </Link>
           ))}
         </nav>
@@ -165,9 +169,10 @@ export default function Shell({ children }: { children: ReactNode }) {
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-ligne bg-fond/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5">
           {NAV.map(({ href, label, Icone, couleur }) => (
-            <Link key={href} href={href} className="flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium" style={{ color: actif(href) ? couleur : "#5d6875" }}>
+            <Link key={href} href={href} className="relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium" style={{ color: actif(href) ? couleur : "#5d6875" }}>
               <Icone className="text-[22px]" />
               {label}
+              {verrouille(href) && <Cadenas className="absolute top-1.5 right-[22%] text-[11px]" />}
             </Link>
           ))}
         </div>

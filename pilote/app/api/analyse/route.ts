@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { analyserMatch, iaConfiguree, type DemandeAnalyse } from "@/lib/serveur/analyste";
-import { stockage } from "@/lib/serveur/stockage";
+import { cleProfil, stockage } from "@/lib/serveur/stockage";
+import { consommerQuota, offreDe } from "@/lib/serveur/abonnements";
+import { droitsDe, offrePour } from "@/lib/offres";
 import type { AnalyseIA } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -33,17 +35,26 @@ function valide(d: Partial<DemandeAnalyse>): d is DemandeAnalyse {
 
 export async function POST(req: Request) {
   if (!iaConfiguree()) return NextResponse.json({ erreur: "L'analyse IA n'est pas configurée (clé ANTHROPIC_API_KEY manquante)." }, { status: 501 });
-  let d: Partial<DemandeAnalyse>;
+  let d: Partial<DemandeAnalyse> & { profilId?: string };
   try {
-    d = (await req.json()) as Partial<DemandeAnalyse>;
+    d = (await req.json()) as Partial<DemandeAnalyse> & { profilId?: string };
   } catch {
     return NextResponse.json({ erreur: "Requête invalide." }, { status: 400 });
   }
-  if (!valide(d)) return NextResponse.json({ erreur: "Requête invalide." }, { status: 400 });
+  const profilId = d.profilId ?? "";
+  delete d.profilId;
+  if (!cleProfil(profilId) || !valide(d)) return NextResponse.json({ erreur: "Requête invalide." }, { status: 400 });
+
+  const { offre } = await offreDe(profilId);
+  const max = droitsDe(offre).analysesIAParJour;
+  if (max <= 0) return NextResponse.json({ erreur: `L'analyse IA est incluse à partir de l'offre ${offrePour((x) => x.analysesIAParJour > 0).nom}.`, verrou: true }, { status: 403 });
 
   const cle = `analyse:${d.id}`;
   const enCache = await stockage().get<AnalyseIA>(cle).catch(() => null);
   if (enCache) return NextResponse.json({ analyse: enCache, cache: true });
+
+  // Une analyse déjà faite pour ce match est partagée et gratuite ; une nouvelle analyse consomme le quota de l'offre.
+  if (!(await consommerQuota(profilId, "ia", max))) return NextResponse.json({ erreur: `Tu as utilisé tes ${max} analyses IA du jour.`, verrou: true }, { status: 429 });
 
   const maintenant = Date.now();
   while (appels.length && appels[0] < maintenant - 3_600_000) appels.shift();

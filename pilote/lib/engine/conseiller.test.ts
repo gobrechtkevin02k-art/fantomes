@@ -188,6 +188,31 @@ describe("plan du jour", () => {
   });
 });
 
+describe("limite de l'offre", () => {
+  it("garde les meilleurs paris et verrouille le reste", () => {
+    const sels = [
+      sel({ odds: 2.3, fairProb: 0.48, confidence: 93 }),
+      sel({ odds: 2.06, fairProb: 0.5, confidence: 72 }),
+      sel({ odds: 2.12, fairProb: 0.5, confidence: 80 }),
+    ];
+    const p = planDuJour(sels, ctx(), [], MAINTENANT, { limiteParJour: 2 });
+    expect(p.sessions.flatMap((s) => s.items)).toHaveLength(2);
+    expect(p.verrouilles).toHaveLength(1);
+    expect(p.message).toContain("offre supérieure");
+  });
+  it("annonce la limite atteinte quand les paris du jour sont déjà joués", () => {
+    const joue: Pari = { id: "j", creeLe: new Date(MAINTENANT - 3_600_000).toISOString(), mode: "classique", jambes: [], cote: 2, mise: 5, confiance: 80, edge: 0.03, probaEstimee: 0.5, statut: "en_cours" };
+    const p = planDuJour([sel({ odds: 2.3, fairProb: 0.48, confidence: 93 })], ctx(reglages(), [joue]), [joue], MAINTENANT, { limiteParJour: 1 });
+    expect(p.verdict).toBe("limite");
+    expect(p.parisJoues).toBe(1);
+  });
+  it("sans le droit, le conseiller ne relève jamais la mise", () => {
+    const s = sel({ odds: 2.3, fairProb: 0.48, confidence: 93 });
+    const p = planDuJour([s], ctx(), [], MAINTENANT, { conviction: false });
+    expect(p.sessions[0].items[0].boost).toBe(1);
+  });
+});
+
 describe("récapitulatif", () => {
   it("résume la nuit", () => {
     const pari = (statut: Pari["statut"], gain: number): Pari => ({

@@ -5,9 +5,7 @@
 // pendant un stop-loss ou une pause, et un objectif en retard ne fait jamais monter les mises.
 
 import type { AnalyseIA, Pari, Selection, VerdictIA } from "../types";
-import { arrondir, MISE_MAX_PCT, miseObjectif, planClassique, type ContexteMise, type ResultatMise } from "./mise";
-import { proposerCombos, type PropositionCombo } from "./combos";
-import { poolObjectif } from "./modes";
+import { arrondir, MISE_MAX_PCT, planClassique, type ContexteMise, type ResultatMise } from "./mise";
 import { clamp } from "./proba";
 import { aHeure, cleJour, debutJour, hhmm, jourRelatif, parties } from "./temps";
 import { cote, eur, eurSigne, pct, pctSigne } from "../format";
@@ -162,10 +160,12 @@ export function avisSelection(
 // ---------------------------------------------------------------------------
 // Plan du jour
 
+// Le conseiller n'accompagne que le mode Classique : les modes fun (Objectif cote, Jackpot) sont à plus
+// haut risque, ils restent disponibles mais sans plan, sans mise relevée et sans notification.
 export interface ItemPlan {
   id: string;
-  type: "simple" | "combine";
-  mode: "classique" | "objectif";
+  type: "simple";
+  mode: "classique";
   selections: Selection[];
   cote: number;
   mise: number;
@@ -176,8 +176,7 @@ export interface ItemPlan {
   proba: number;
   heure: string;
   message: string;
-  avis?: Avis;
-  combo?: PropositionCombo;
+  avis: Avis;
 }
 
 export interface Session {
@@ -192,7 +191,7 @@ export interface Session {
 }
 
 export interface Plan {
-  verdict: "jouer" | "attendre" | "repos";
+  verdict: "jouer" | "attendre" | "repos" | "limite";
   titre: string;
   message: string;
   sessions: Session[];
@@ -200,11 +199,16 @@ export interface Plan {
   total: number;
   gainAttendu: number;
   ecartes: { selection: Selection; raison: string }[];
+  verrouilles: ItemPlan[]; // opportunités du jour au-delà de la limite de l'offre
+  parisJoues: number; // paris Classique déjà enregistrés aujourd'hui
+  limite: number;
 }
 
 export interface OptionsPlan {
   mouvements?: Record<string, MouvementCote>;
   analyses?: Record<string, AnalyseIA>;
+  limiteParJour?: number; // paris Classique par jour autorisés par l'offre
+  conviction?: boolean; // l'offre autorise-t-elle la mise relevée ?
 }
 
 const LIBELLE_RAISON: Record<RaisonHeure, string> = {
@@ -215,22 +219,24 @@ const LIBELLE_RAISON: Record<RaisonHeure, string> = {
   maintenant: "Dès maintenant",
 };
 
-export function planDuJour(selections: Selection[], ctx: ContexteMise, paris: Pari[], maintenant: number, opts: OptionsPlan = {}): Plan {
-  const r = ctx.reglages;
-  const tz = r.conseiller.fuseau;
+export function planDuJour(selections: Selection[], ctxInitial: ContexteMise, paris: Pari[], maintenant: number, opts: OptionsPlan = {}): Plan {
+  let ctx = ctxInitial;
+  const tz = ctx.reglages.conseiller.fuseau;
   const prot = ctx.protections;
   const ecartes: Plan["ecartes"] = [];
+  const limite = opts.limiteParJour ?? Infinity;
+  const debut = debutJour(maintenant, tz);
+  const parisJoues = paris.filter((p) => p.mode === "classique" && Date.parse(p.creeLe) >= debut).length;
+  const vide = { sessions: [], plusTard: [], total: 0, gainAttendu: 0, ecartes, verrouilles: [], parisJoues, limite };
+  if (opts.conviction === false) ctx = { ...ctx, reglages: { ...ctx.reglages, conseiller: { ...ctx.reglages.conseiller, conviction: false } } };
+  const r = ctx.reglages;
 
   if (prot.bloque) {
     return {
+      ...vide,
       verdict: "repos",
       titre: "On ne joue pas",
       message: `${prot.raisons.join(" ")} Je reprends la main automatiquement dès que c'est possible.`,
-      sessions: [],
-      plusTard: [],
-      total: 0,
-      gainAttendu: 0,
-      ecartes,
     };
   }
 
@@ -262,43 +268,7 @@ export function planDuJour(selections: Selection[], ctx: ContexteMise, paris: Pa
     });
   }
 
-  // 2. Le combiné du jour (facultatif) : matchs d'aujourd'hui et de demain uniquement.
-  if (r.conseiller.combineDuJour) {
-    const limite = debutJour(maintenant, tz) + 2 * 86_400_000;
-    const enCours = new Set(paris.filter((p) => p.statut === "en_cours").flatMap((p) => p.jambes.map((j) => j.eventId)));
-    const pool = poolObjectif(selections, r, maintenant, r.objectifCote.cible).filter((s) => Date.parse(s.commence) < limite && !enCours.has(s.eventId));
-    const meilleur = proposerCombos(pool, r.objectifCote.cible, Math.min(r.objectifCote.jambesMax, 5))[0];
-    if (meilleur && meilleur.confiance >= 55) {
-      const m = miseObjectif(meilleur.confiance, ctx);
-      if (m.mise > 0) {
-        const premier = Date.parse(meilleur.premierMatch);
-        const foot = meilleur.jambes.some((j) => j.sportKey.startsWith("soccer"));
-        let heure = maintenant;
-        if (foot && r.conseiller.attendreCompos && premier - maintenant > 1.25 * HEURE && premier - maintenant < 30 * HEURE) {
-          const t = heureCompos(premier);
-          if (parties(t, tz).heure >= 8) heure = t;
-        }
-        items.push({
-          id: `combo:${meilleur.jambes.map((j) => j.id).join("~")}`,
-          type: "combine",
-          mode: "objectif",
-          selections: meilleur.jambes,
-          cote: meilleur.cote,
-          mise: m.mise,
-          miseBase: m.mise,
-          boost: 1,
-          confiance: meilleur.confiance,
-          edge: meilleur.edge,
-          proba: meilleur.probaJuste,
-          heure: new Date(heure).toISOString(),
-          combo: meilleur,
-          message: `Le combiné du jour : cote ${cote(meilleur.cote)} en ${meilleur.jambes.length} matchs, ${pct(meilleur.probaJuste)} de chances de passer. Petite mise de ${eur(m.mise)}, prise dans la poche Objectif.`,
-        });
-      }
-    }
-  }
-
-  // 3. Respect de l'argent en jeu maximum (le combiné est dans une autre poche mais compte aussi).
+  // 2. Respect de l'argent en jeu maximum.
   items.sort((a, b) => Date.parse(a.heure) - Date.parse(b.heure) || b.mise * b.edge - a.mise * a.edge);
   let reste = prot.expositionRestante;
   const retenus: ItemPlan[] = [];
@@ -311,11 +281,15 @@ export function planDuJour(selections: Selection[], ctx: ContexteMise, paris: Pa
     retenus.push(it);
   }
 
-  // 4. Aujourd'hui (en sessions horaires) ou plus tard.
-  const finJour = debutJour(maintenant, tz) + 86_400_000;
+  // 3. Aujourd'hui (en sessions horaires) ou plus tard, dans la limite de l'offre (on garde les meilleurs).
+  const finJour = debut + 86_400_000;
   const jour = cleJour(maintenant, tz);
-  const aujourdhui = retenus.filter((i) => Date.parse(i.heure) < finJour);
+  const duJour = retenus.filter((i) => Date.parse(i.heure) < finJour);
   const plusTard = retenus.filter((i) => Date.parse(i.heure) >= finJour);
+  const places = Math.max(0, limite - parisJoues);
+  const meilleurs = new Set([...duJour].sort((a, b) => b.mise * b.edge - a.mise * a.edge).slice(0, places).map((i) => i.id));
+  const aujourdhui = duJour.filter((i) => meilleurs.has(i.id));
+  const verrouilles = duJour.filter((i) => !meilleurs.has(i.id));
   const sessions: Session[] = [];
   for (const it of aujourdhui) {
     const t = Date.parse(it.heure);
@@ -330,7 +304,7 @@ export function planDuJour(selections: Selection[], ctx: ContexteMise, paris: Pa
       heure: it.heure,
       libelle: immediat ? "Maintenant" : hhmm(t, tz),
       ouverte: immediat,
-      raison: it.avis ? LIBELLE_RAISON[it.avis.raisonHeure] : "Combiné du jour",
+      raison: LIBELLE_RAISON[it.avis.raisonHeure],
       items: [it],
       total: 0,
       gainAttendu: 0,
@@ -344,22 +318,32 @@ export function planDuJour(selections: Selection[], ctx: ContexteMise, paris: Pa
   const total = aujourdhui.reduce((t, i) => t + i.mise, 0);
   const gainAttendu = aujourdhui.reduce((t, i) => t + i.mise * i.edge, 0);
   const n = aujourdhui.length;
+  const base = { ...vide, sessions, plusTard, ecartes, verrouilles, total, gainAttendu };
+  const enPlus = verrouilles.length
+    ? ` ${verrouilles.length} autre${verrouilles.length > 1 ? "s" : ""} opportunité${verrouilles.length > 1 ? "s" : ""} aujourd'hui avec une offre supérieure.`
+    : "";
 
   if (n > 0) {
     const morceaux = sessions.map((s) => `${s.items.length} ${s.ouverte ? "tout de suite" : `à ${s.libelle}`}${s.raison === "Après les compositions" ? " (après les compositions)" : ""}`);
     const boostes = aujourdhui.filter((i) => i.boost > 1.001).length;
     return {
+      ...base,
       verdict: "jouer",
       titre: n === 1 ? "1 pari aujourd'hui" : `${n} paris aujourd'hui`,
       message:
         `J'ai retenu ${n} pari${n > 1 ? "s" : ""} pour ${eur(total)} au total : ${morceaux.join(", ")}.` +
         (boostes ? ` ${boostes > 1 ? `${boostes} mises sont montées` : "Une mise est montée"} au-dessus du conseil de gestion, car la cote est exceptionnelle.` : "") +
-        ` Gain moyen attendu : ${eurSigne(gainAttendu)}.`,
-      sessions,
-      plusTard,
-      total,
-      gainAttendu,
-      ecartes,
+        ` Gain moyen attendu : ${eurSigne(gainAttendu)}.` +
+        enPlus,
+    };
+  }
+
+  if (verrouilles.length > 0) {
+    return {
+      ...base,
+      verdict: "limite",
+      titre: "Limite du jour atteinte",
+      message: `Tu as joué ${parisJoues} pari${parisJoues > 1 ? "s" : ""} aujourd'hui, le maximum de ton offre. J'ai repéré ${verrouilles.length} autre${verrouilles.length > 1 ? "s" : ""} opportunité${verrouilles.length > 1 ? "s" : ""} solide${verrouilles.length > 1 ? "s" : ""}.`,
     };
   }
 
@@ -370,23 +354,19 @@ export function planDuJour(selections: Selection[], ctx: ContexteMise, paris: Pa
       verdict: "attendre",
       titre: "Pas de pari aujourd'hui",
       message: `Aujourd'hui, nous n'avons pas d'indice de confiance assez élevé pour jouer. Voyons ${jourRelatif(t, maintenant, tz)} : j'ai déjà repéré ${plusTard.length} opportunité${plusTard.length > 1 ? "s" : ""}, je te préviens à ${hhmm(t, tz)}.`,
-      sessions,
-      plusTard,
+      ...base,
       total: 0,
       gainAttendu: 0,
-      ecartes,
     };
   }
 
   return {
+    ...base,
     verdict: "repos",
     titre: "Pas de pari aujourd'hui",
     message: "Aujourd'hui, nous n'avons pas d'indice de confiance assez élevé pour jouer. On garde la bankroll au chaud : voyons demain. Ne pas parier est aussi une décision gagnante.",
-    sessions,
-    plusTard,
     total: 0,
     gainAttendu: 0,
-    ecartes,
   };
 }
 

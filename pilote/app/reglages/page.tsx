@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import type { MarketKey, Mode, Profil, SportInfo } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { useAutonomie } from "@/lib/autonomie";
+import { OFFRES, prixMensuel, type Droits } from "@/lib/offres";
+import { Verrou } from "@/components/Offres";
+import Link from "next/link";
 import type { EtatApp, ReglagesConseiller } from "@/lib/types";
 import { useCalculs, useDonnees } from "@/lib/donnees";
 import { FRACTION_KELLY, LIBELLE_PROFIL, MISE_MAX_PCT } from "@/lib/engine/mise";
@@ -61,7 +64,7 @@ const MARCHES: { k: MarketKey; l: string; d: string }[] = [
 
 export default function Reglages() {
   const { etat, majReglages, remplacer, reinitialiser, ajouterMouvement } = useStore();
-  const { source, quota, majLe, erreursApi, rafraichir, notifier, statut } = useDonnees();
+  const { source, quota, majLe, erreursApi, rafraichir, notifier, statut, abonnement, droits } = useDonnees();
   const { notifications, activerNotifications, desactiverNotifications, testerNotification } = useAutonomie();
   const [code, setCode] = useState("");
   const cs = etat.reglages.conseiller;
@@ -102,28 +105,55 @@ export default function Reglages() {
         <p className="text-[14px] text-doux">Tout est enregistré sur cet appareil. Pense à exporter une sauvegarde de temps en temps.</p>
       </div>
 
+      <Carte accent={OFFRES[abonnement.offre].couleur}>
+        <Titre
+          sous={
+            abonnement.geste === "complet"
+              ? "Accès complet offert (propriétaire)."
+              : abonnement.finPeriode && abonnement.statut === "actif"
+                ? `Renouvellement le ${dateLongue(abonnement.finPeriode)}`
+                : prixMensuel(abonnement.offre)
+          }
+          action={
+            <Link href="/offres" className="text-[13px] font-semibold" style={{ color: OFFRES[abonnement.offre].couleur }}>
+              {abonnement.offre === "elite" ? "Gérer" : "Voir les offres"}
+            </Link>
+          }
+        >
+          Mon offre : {OFFRES[abonnement.offre].nom}
+        </Titre>
+        <p className="text-[13px] text-doux">
+          {Number.isFinite(droits.parisParJour) ? `${droits.parisParJour} pari${droits.parisParJour > 1 ? "s" : ""} Classique par jour` : "Paris Classique illimités"} ·{" "}
+          {droits.analysesIAParJour ? `${droits.analysesIAParJour} analyse${droits.analysesIAParJour > 1 ? "s" : ""} IA par jour` : "pas d'analyse IA"} ·{" "}
+          {droits.direct ? "suivi en direct" : droits.tempsReel ? "temps réel" : droits.notifMatin ? "récap du matin" : "sans notification"}
+        </p>
+      </Carte>
+
       <Carte accent="#34d399">
-        <Titre sous="Comment ton conseiller décide et te parle.">Ton conseiller</Titre>
+        <Titre sous="Comment ton conseiller décide et te parle. Il n'accompagne que le mode Classique.">Ton conseiller</Titre>
         <div className="divide-y divide-ligne">
           {(
             [
               ["modeSimple", "Mode simple", "Interface épurée : tu lis et tu cliques. Les chiffres détaillés restent accessibles d'un geste."],
               ["conviction", "Le conseiller peut relever les mises", "Quand l'indice de confiance et la cote sont exceptionnels, il mise plus que la gestion de bankroll, sans jamais dépasser le plafond de sécurité de ton profil."],
               ["attendreCompos", "Attendre les compositions (football)", "Il programme les paris de foot environ une heure avant le match, une fois les compositions officielles connues, sauf si la cote risque de baisser."],
-              ["combineDuJour", "Combiné du jour", "Ajoute au plan le combiné le plus sûr pour ta cote cible du mode Objectif cote."],
               ["analyseAuto", "Afficher automatiquement l'analyse complète de l'IA", "Sinon, un bouton « Voir l'analyse complète » te laisse l'ouvrir quand tu veux. Chaque analyse a un coût d'API."],
             ] as [keyof ReglagesConseiller, string, string][]
-          ).map(([k, l, d]) => (
-            <div key={k} className="flex items-start justify-between gap-4 py-3 first:pt-0">
-              <div>
-                <div className="text-[14px] font-medium">{l}</div>
-                <div className="text-[12px] leading-relaxed text-doux">{d}</div>
+          ).map(([k, l, d]) => {
+            const test: ((x: Droits) => boolean) | null = k === "conviction" ? (x) => x.conviction : k === "analyseAuto" ? (x) => x.analysesIAParJour > 0 : null;
+            const bloque = test !== null && !test(droits);
+            return (
+              <div key={k} className="flex items-start justify-between gap-4 py-3 first:pt-0">
+                <div>
+                  <div className="text-[14px] font-medium">{l}</div>
+                  <div className="text-[12px] leading-relaxed text-doux">{d}</div>
+                </div>
+                {bloque && test ? <Verrou test={test} className="shrink-0" /> : <Interrupteur actif={!!cs[k]} label={l} onChange={(v) => majConseiller({ [k]: v })} />}
               </div>
-              <Interrupteur actif={!!cs[k]} label={l} onChange={(v) => majConseiller({ [k]: v })} />
-            </div>
-          ))}
+            );
+          })}
         </div>
-        {cs.conviction && (
+        {cs.conviction && droits.conviction && (
           <div className="mt-2 border-t border-ligne pt-3">
             <div className="mb-2 text-[13px] font-medium text-doux">Mise relevée au maximum de</div>
             <div className="flex gap-2">
@@ -153,6 +183,7 @@ export default function Reglages() {
                   non_supporte: "Ce navigateur ne gère pas les notifications.",
                   ios_installer: "Sur iPhone : ajoute d'abord Pilote à l'écran d'accueil, puis ouvre-le depuis l'icône.",
                   serveur_absent: "Le serveur n'a pas encore de clés de notification (VAPID).",
+                  offre: "Incluses à partir de l'offre Essentiel (récap du matin) et Pro (heures de jeu, résultats).",
                   refuse: "Bloquées dans les réglages du navigateur.",
                   inactif: "Désactivées sur cet appareil.",
                   actif: "Activées sur cet appareil.",
@@ -199,7 +230,12 @@ export default function Reglages() {
 
       <Carte>
         <Titre sous="Pour retrouver tes données sur un autre appareil et permettre à l'agent de travailler appli fermée.">Synchronisation</Titre>
-        {statut?.stockage === "memoire" ? (
+        {!droits.synchro ? (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[13px] text-doux">La synchronisation multi-appareils est incluse à partir de l&apos;offre Essentiel.</p>
+            <Verrou test={(x) => x.synchro} className="shrink-0" />
+          </div>
+        ) : statut?.stockage === "memoire" ? (
           <p className="text-[13px] text-doux">Pas de stockage serveur durable : ajoute une base Upstash Redis (gratuite) pour activer la synchronisation et les notifications appli fermée.</p>
         ) : (
           <div className="space-y-3">

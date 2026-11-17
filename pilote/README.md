@@ -37,6 +37,30 @@ Sur iPhone, les notifications web demandent d'abord d'ajouter Pilote à l'écran
 
 **Pourquoi le clic final reste chez Winamax :** Winamax n'a pas d'API publique pour parier. Un robot qui se connecterait avec tes identifiants mettrait ton compte en danger. Pilote fait tout le reste : choix, mise, heure, enregistrement, suivi et résultats.
 
+## Offres d'abonnement
+
+| | Découverte | Essentiel | Pro | Élite |
+| --- | --- | --- | --- | --- |
+| Prix | gratuit | 4,99 €/mois | 9,99 €/mois | 19,99 €/mois |
+| Paris Classique / jour | 1 | 2 | 5 | illimités |
+| Notifications | – | récap du matin | + heures de jeu, résultats en temps réel | + suivi en direct |
+| Mise relevée | – | – | ✓ | ✓ |
+| Analyses IA / jour | 0 | 1 | 5 | 20 |
+| Modes fun | – | – | Objectif cote | Objectif cote + Jackpot |
+
+Paiement par Stripe (Checkout, portail client, webhook). Limites et prix dans `lib/offres.ts`. Les fonctionnalités coûteuses (IA, notifications, direct) sont contrôlées côté serveur. Le mémo `VENDREDI.md` détaille la mise en route.
+
+## Temps réel (mode Classique uniquement)
+
+- **Résultats** : vérifiés toutes les 3 minutes appli ouverte, toutes les 15 minutes par l'agent. Notification « ✅ Gagné / ❌ Perdu », bankroll mise à jour, prochaines mises recalculées.
+- **Après une perte**, l'agent indique la prochaine occasion ; la mise suit la bankroll et n'est relevée que si le pari est exceptionnel, jamais pour « se refaire ».
+- **Suivi en direct** (Élite) : probabilité actuelle du pari, d'après les cotes en direct ou, à défaut, un modèle score + temps. Conseil « sécuriser » (gros gain bien parti) ou « limiter la casse », avec le montant minimum de cash-out à accepter sur Winamax.
+- Les modes Objectif cote et Jackpot sont à haut risque : ni plan, ni mise relevée, ni notification.
+
+## Skills de l'analyste IA
+
+Les fiches `skills/<nom>/SKILL.md` (méthode générale, football, basket, tennis) sont ajoutées aux instructions de l'analyste selon le sport du match. Pour enrichir l'expertise, il suffit d'éditer ou d'ajouter une fiche.
+
 ## Comment ça marche
 
 1. **Juste prix.** Pour chaque issue, Pilote retire la marge de chaque bookmaker de référence (méthode « puissance », qui corrige le biais favori / outsider) puis fait une moyenne pondérée en log-cote. Pinnacle et Betfair pèsent plus lourd.

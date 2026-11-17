@@ -17,4 +17,4 @@ export function middleware(req: NextRequest) {
 }
 
 // Le cron a son propre secret ; le service worker et les icônes doivent rester accessibles aux notifications.
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|icones/|sw.js|manifest.webmanifest|api/cron).*)"] };
+export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|icones/|sw.js|manifest.webmanifest|api/cron|api/abonnement/webhook).*)"] };

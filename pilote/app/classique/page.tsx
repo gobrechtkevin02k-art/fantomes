@@ -7,12 +7,14 @@ import { FRACTION_KELLY, LIBELLE_PROFIL, MISE_MAX_PCT, planClassique } from "@/l
 import { eur, pct } from "@/lib/format";
 import { emojiSport, nomSport } from "@/lib/sports";
 import { CarteSelection, ModalPari, type ProjetPari } from "@/components/Paris";
+import { Verrou } from "@/components/Offres";
+import { debutJour } from "@/lib/engine/temps";
 import { Carte, Puces, Vide } from "@/components/ui";
 import { IcBouclier, IcChevron } from "@/components/Icones";
 
 export default function Classique() {
   const { etat } = useStore();
-  const { selections, chargement, maintenant } = useDonnees();
+  const { selections, chargement, maintenant, droits } = useDonnees();
   const { ctx, bk, prot } = useCalculs();
   const [sport, setSport] = useState("tous");
   const [projet, setProjet] = useState<ProjetPari | null>(null);
@@ -21,7 +23,18 @@ export default function Classique() {
 
   const plan = useMemo(() => planClassique(selections, ctx, etat.paris, maintenant), [selections, ctx, etat.paris, maintenant]);
   const sports = useMemo(() => [...new Set(plan.map((p) => p.selection.sportKey))], [plan]);
-  const liste = plan.filter((p) => sport === "tous" || p.selection.sportKey === sport);
+  // Limite de l'offre : les meilleurs paris restent visibles, les autres sont réservés.
+  const joues = etat.paris.filter((p) => p.mode === "classique" && Date.parse(p.creeLe) >= debutJour(maintenant, r.conseiller.fuseau)).length;
+  const places = Math.max(0, droits.parisParJour - joues);
+  const visibles = new Set(
+    plan
+      .filter((p) => p.mise.mise > 0 && !p.dejaJoue)
+      .sort((a, b) => b.gainAttendu - a.gainAttendu)
+      .slice(0, places)
+      .map((p) => p.selection.id),
+  );
+  const reserves = Number.isFinite(droits.parisParJour) ? plan.filter((p) => p.mise.mise > 0 && !p.dejaJoue && !visibles.has(p.selection.id)).length : 0;
+  const liste = plan.filter((p) => (sport === "tous" || p.selection.sportKey === sport) && (!Number.isFinite(droits.parisParJour) || visibles.has(p.selection.id) || p.dejaJoue));
   const jouables = liste.filter((p) => p.mise.mise > 0 && !p.horsBudget && !p.dejaJoue);
   const total = jouables.reduce((s, p) => s + p.mise.mise, 0);
   const attendu = jouables.reduce((s, p) => s + p.gainAttendu, 0);
@@ -112,6 +125,16 @@ export default function Classique() {
           {liste.map((p) => (
             <CarteSelection key={p.selection.id} s={p.selection} mise={p.mise} mode="classique" horsBudget={p.horsBudget} dejaJoue={p.dejaJoue} onParier={setProjet} />
           ))}
+        </div>
+      )}
+
+      {reserves > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-ligne p-4 text-[13px] text-doux">
+          <span>
+            {reserves} autre{reserves > 1 ? "s" : ""} pari{reserves > 1 ? "s" : ""} à valeur positive aujourd&apos;hui
+            {joues > 0 ? ` (tu as déjà joué ${joues} pari${joues > 1 ? "s" : ""})` : ""}.
+          </span>
+          <Verrou test={(d) => d.parisParJour > droits.parisParJour} className="shrink-0" />
         </div>
       )}
 

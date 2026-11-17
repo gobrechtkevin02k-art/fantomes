@@ -4,6 +4,8 @@ import { cleApi, cotesLive, scoresLive } from "@/lib/oddsapi";
 import { tacheProfil, type Dependances, type MetaProfil } from "@/lib/serveur/agent";
 import { envoyer, pushConfigure } from "@/lib/serveur/push";
 import { stockage } from "@/lib/serveur/stockage";
+import { offreDe } from "@/lib/serveur/abonnements";
+import { droitsDe } from "@/lib/offres";
 import type { EtatApp } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -24,8 +26,8 @@ const deps: Dependances = {
     return res.flat();
   },
   async scores(sports) {
-    if (!cleApi()) return scoresDemo(sports);
-    const res = await Promise.all(sports.map((s) => scoresLive(s, 3).catch(() => [])));
+    if (!cleApi()) return scoresDemo(sports, Date.now(), 1);
+    const res = await Promise.all(sports.map((s) => scoresLive(s, 1).catch(() => [])));
     return res.flat();
   },
 };
@@ -41,7 +43,8 @@ export async function GET(req: Request) {
       const etat = await st.get<EtatApp>(`etat:${id}`);
       if (!etat?.onboarding) continue;
       const meta = (await st.get<MetaProfil>(`meta:${id}`)) ?? {};
-      const { notifications, meta: nouvelle } = await tacheProfil(etat, meta, maintenant, deps);
+      const { offre } = await offreDe(id);
+      const { notifications, meta: nouvelle } = await tacheProfil(etat, meta, maintenant, deps, droitsDe(offre));
       let envoyees = 0;
       for (const n of notifications) envoyees += await envoyer(id, n);
       if (JSON.stringify(nouvelle) !== JSON.stringify(meta)) await st.set(`meta:${id}`, nouvelle);

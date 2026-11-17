@@ -3,6 +3,7 @@ import { coteDemo, scoresDemo } from "../demo";
 import { etatInitial } from "../store";
 import type { EtatApp } from "../types";
 import { tacheProfil, type MetaProfil } from "./agent";
+import { droitsDe } from "../offres";
 
 const deps = { cotes: async (s: string[]) => coteDemo(s, Date.parse("2026-11-17T06:05:00Z")), scores: async (s: string[]) => scoresDemo(s, Date.parse("2026-11-17T06:05:00Z")) };
 
@@ -53,5 +54,35 @@ describe("agent autonome", () => {
     expect(a.notifications[0].texte).toContain("2 paris prêts");
     const b = await tacheProfil(etat(), a.meta, Date.parse("2026-11-17T18:10:00Z"), deps);
     expect(b.notifications).toHaveLength(0);
+  });
+
+  it("notifie un résultat en temps réel, sans courir après la perte, une seule fois", async () => {
+    const t = Date.parse("2026-11-17T19:30:00Z");
+    const commence = "2026-11-17T16:00:00Z";
+    const e = etat();
+    e.paris = [
+      {
+        id: "p1",
+        creeLe: "2026-11-17T15:00:00Z",
+        mode: "classique",
+        cote: 2.1,
+        mise: 10,
+        confiance: 80,
+        edge: 0.04,
+        probaEstimee: 0.5,
+        statut: "en_cours",
+        jambes: [{ selectionId: "x", eventId: "m1", sportKey: "soccer_epl", sportTitle: "EPL", commence, home: "A", away: "B", market: "h2h", issue: "A", label: "Victoire A", odds: 2.1, fairProb: 0.5, statut: "en_cours" }],
+      },
+    ];
+    const depsPerdu = { cotes: async () => [], scores: async () => [{ id: "m1", sportKey: "soccer_epl", commence, completed: true, home: "A", away: "B", scores: [{ name: "A", score: 0 }, { name: "B", score: 1 }] }] };
+    const a = await tacheProfil(e, { matinEnvoye: "2026-11-17" }, t, depsPerdu, droitsDe("pro"));
+    const n = a.notifications.find((x) => x.tag === "resultat-p1")!;
+    expect(n.titre).toContain("Perdu");
+    expect(n.texte).toContain("Je ne cours pas après la perte");
+    expect(n.texte).toContain("Bankroll : 490,00");
+    const b = await tacheProfil(e, a.meta, t + 15 * 60_000, depsPerdu, droitsDe("pro"));
+    expect(b.notifications.filter((x) => x.tag === "resultat-p1")).toHaveLength(0);
+    const decouverte = await tacheProfil(e, { matinEnvoye: "2026-11-17" }, t, depsPerdu, droitsDe("decouverte"));
+    expect(decouverte.notifications).toHaveLength(0);
   });
 });

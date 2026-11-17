@@ -3,12 +3,13 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { useCalculs, useDonnees } from "@/lib/donnees";
+import { PageVerrouillee } from "@/components/Offres";
 import { combosObjectif } from "@/lib/engine/modes";
 import { miseObjectif } from "@/lib/engine/mise";
 import { cote, eur } from "@/lib/format";
 import { CarteCombo, ModalPari, type ProjetPari } from "@/components/Paris";
 import { Carte, Champ, Puces, Vide } from "@/components/ui";
-import { IcCible, IcInfo } from "@/components/Icones";
+import { IcAlerte, IcCible, IcInfo } from "@/components/Icones";
 
 const CIBLES = [2, 3, 5, 10, 20, 50];
 const HORIZONS = [
@@ -22,7 +23,7 @@ const JAMBES = [3, 5, 8, 12];
 
 export default function Objectif() {
   const { etat, majReglages } = useStore();
-  const { selections, chargement, maintenant } = useDonnees();
+  const { selections, chargement, maintenant, droits } = useDonnees();
   const { ctx, bk, prot } = useCalculs();
   const o = etat.reglages.objectifCote;
   const [saisie, setSaisie] = useState(CIBLES.includes(o.cible) ? "" : String(o.cible));
@@ -36,6 +37,14 @@ export default function Objectif() {
     [selections, etat.reglages, params.cible, params.horizonJours, params.jambesMax, maintenant],
   );
 
+  if (!droits.objectifCote) {
+    return (
+      <PageVerrouillee test={(d) => d.objectifCote} titre="Objectif cote" icone={<IcCible />}>
+        Tu fixes une cote minimum, Pilote cherche le combiné qui a le plus de chances de passer. Mode fun à haut risque, sans accompagnement du conseiller.
+      </PageVerrouillee>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-start gap-3">
@@ -46,6 +55,14 @@ export default function Objectif() {
           <h1 className="text-xl font-bold tracking-tight">Objectif cote</h1>
           <p className="text-[14px] text-doux">Tu fixes la cote minimum, Pilote cherche parmi tous les matchs à venir le combiné qui a le plus de chances de passer.</p>
         </div>
+      </div>
+
+      <div className="flex gap-2 rounded-2xl border border-negatif/30 bg-negatif/10 p-3 text-[12px] leading-relaxed text-negatif">
+        <IcAlerte className="mt-0.5 shrink-0 text-sm" />
+        <p>
+          <strong>Mode à haut risque, hors accompagnement.</strong> Le conseiller ne gère pas ces paris : pas de plan, pas de mise relevée, pas de suivi en temps réel ni de
+          notification. Ils restent limités à leur petite poche pour ne jamais toucher ta bankroll sérieuse.
+        </p>
       </div>
 
       <Carte accent="#a78bfa">

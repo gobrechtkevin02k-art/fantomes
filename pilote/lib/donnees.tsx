@@ -10,9 +10,15 @@ import { reglerParis } from "./engine/reglement";
 import { calculerBankroll, projection, protections } from "./engine/bankroll";
 import type { ContexteMise } from "./engine/mise";
 import { planDuJour, type MouvementCote } from "./engine/conseiller";
+import { droitsDe, type Droits, type EtatAbonnement } from "./offres";
 
 const CLE_MOUVEMENTS = "pilote:cotes-vues:v1";
 const CLE_ANALYSES = "pilote:analyses:v1";
+const CLE_ABONNEMENT = "pilote:abonnement:v1";
+
+export interface Abonnement extends EtatAbonnement {
+  paiement: boolean;
+}
 const TTL_ANALYSE = 3 * 3_600_000;
 
 export interface Statut {
@@ -73,6 +79,9 @@ interface ContexteDonnees {
   mouvements: Record<string, MouvementCote>;
   analyses: Record<string, EtatAnalyse>;
   demanderAnalyse: (s: Selection) => Promise<void>;
+  abonnement: Abonnement;
+  droits: Droits;
+  rafraichirAbonnement: () => Promise<void>;
 }
 
 const Ctx = createContext<ContexteDonnees | null>(null);
@@ -93,6 +102,27 @@ export function DonneesProvider({ children }: { children: ReactNode }) {
   const [statut, setStatut] = useState<Statut | null>(null);
   const [mouvements, setMouvements] = useState<Record<string, MouvementStocke>>({});
   const [analyses, setAnalyses] = useState<Record<string, EtatAnalyse>>({});
+  const [abonnement, setAbonnement] = useState<Abonnement>({ offre: "decouverte", statut: "aucun", finPeriode: null, paiement: false });
+  const profilId = etat.profilId;
+
+  const rafraichirAbonnement = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/abonnement?id=${encodeURIComponent(profilId)}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const a = (await res.json()) as Abonnement;
+      setAbonnement(a);
+      ecrireJson(CLE_ABONNEMENT, a);
+    } catch {
+      /* hors ligne : on garde la dernière offre connue */
+    }
+  }, [profilId]);
+
+  useEffect(() => {
+    if (!pret) return;
+    const connu = lireJson<Abonnement | null>(CLE_ABONNEMENT, null);
+    if (connu) setAbonnement(connu);
+    rafraichirAbonnement();
+  }, [pret, rafraichirAbonnement]);
 
   useEffect(() => {
     fetch("/api/statut", { cache: "no-store" })
@@ -166,7 +196,7 @@ export function DonneesProvider({ children }: { children: ReactNode }) {
 
   const verifierResultats = useCallback(async (): Promise<number> => {
     const now = Date.now();
-    const enAttente = etat.paris.filter((p) => p.statut === "en_cours" && p.jambes.some((j) => j.statut === "en_cours" && Date.parse(j.commence) + 2 * 3_600_000 < now));
+    const enAttente = etat.paris.filter((p) => p.statut === "en_cours" && p.jambes.some((j) => j.statut === "en_cours" && Date.parse(j.commence) + 45 * 60_000 < now));
     if (enAttente.length === 0) return 0;
     const sportsAttente = [...new Set(enAttente.flatMap((p) => p.jambes.map((j) => j.sportKey)))];
     try {
@@ -179,7 +209,11 @@ export function DonneesProvider({ children }: { children: ReactNode }) {
         const regles = modifies.filter((p) => p.statut !== "en_cours");
         if (regles.length) {
           const gagnes = regles.filter((p) => p.statut === "gagne").length;
-          notifier(`${regles.length} pari${regles.length > 1 ? "s" : ""} réglé${regles.length > 1 ? "s" : ""} automatiquement (${gagnes} gagné${gagnes > 1 ? "s" : ""}).`, "succes");
+          const bilan = regles.reduce((t, p) => t + (p.gain ?? 0) - p.mise, 0);
+          notifier(
+            `${regles.length} pari${regles.length > 1 ? "s" : ""} réglé${regles.length > 1 ? "s" : ""} (${gagnes} gagné${gagnes > 1 ? "s" : ""}, ${bilan >= 0 ? "+" : "−"}${Math.abs(bilan).toFixed(2).replace(".", ",")} €). Les prochaines mises sont recalculées sur ta nouvelle bankroll.`,
+            bilan >= 0 ? "succes" : "info",
+          );
         }
       }
       return modifies.length;
@@ -194,6 +228,16 @@ export function DonneesProvider({ children }: { children: ReactNode }) {
       verifierResultats();
     }
   }, [pret, verifierResultats]);
+
+  // Temps réel : tant qu'un match sur lequel tu as parié est en cours, les résultats sont vérifiés toutes les 3 minutes.
+  const matchEnCours = etat.paris.some((p) => p.statut === "en_cours" && p.jambes.some((j) => j.statut === "en_cours" && Date.parse(j.commence) <= maintenant));
+  useEffect(() => {
+    if (!pret || !matchEnCours) return;
+    const t = setInterval(() => {
+      if (document.visibilityState === "visible") verifierResultats();
+    }, 3 * 60_000);
+    return () => clearInterval(t);
+  }, [pret, matchEnCours, verifierResultats]);
 
   const events = useMemo(() => data?.events ?? [], [data]);
   const selections = useMemo(() => construireSelections(events, { maintenant }), [events, maintenant]);
@@ -228,6 +272,7 @@ export function DonneesProvider({ children }: { children: ReactNode }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            profilId: etat.profilId,
             id: s.id,
             sport: s.sportKey.split("_")[0],
             competition: s.sportTitle,
@@ -254,7 +299,7 @@ export function DonneesProvider({ children }: { children: ReactNode }) {
         setAnalyses((a) => ({ ...a, [s.id]: { etat: "erreur", erreur: (e as Error).message || "Analyse impossible." } }));
       }
     },
-    [mouvements],
+    [mouvements, etat.profilId],
   );
 
   const valeur = useMemo<ContexteDonnees>(
@@ -276,8 +321,11 @@ export function DonneesProvider({ children }: { children: ReactNode }) {
       mouvements,
       analyses,
       demanderAnalyse,
+      abonnement,
+      droits: droitsDe(abonnement.offre),
+      rafraichirAbonnement,
     }),
-    [data, events, selections, chargement, erreur, maintenant, rafraichir, verifierResultats, toasts, notifier, statut, mouvements, analyses, demanderAnalyse],
+    [data, events, selections, chargement, erreur, maintenant, rafraichir, verifierResultats, toasts, notifier, statut, mouvements, analyses, demanderAnalyse, abonnement, rafraichirAbonnement],
   );
   return <Ctx.Provider value={valeur}>{children}</Ctx.Provider>;
 }
@@ -304,11 +352,11 @@ export function useCalculs() {
 /** Le plan du jour du conseiller, recalculé à chaque changement de cotes, d'analyses ou de bankroll. */
 export function usePlan() {
   const { etat } = useStore();
-  const { selections, maintenant, mouvements, analyses } = useDonnees();
+  const { selections, maintenant, mouvements, analyses, droits } = useDonnees();
   const { ctx } = useCalculs();
   return useMemo(() => {
     const ok: Record<string, AnalyseIA> = {};
     for (const [id, a] of Object.entries(analyses)) if (a.etat === "ok") ok[id] = a.analyse;
-    return planDuJour(selections, ctx, etat.paris, maintenant, { mouvements, analyses: ok });
-  }, [selections, ctx, etat.paris, maintenant, mouvements, analyses]);
+    return planDuJour(selections, ctx, etat.paris, maintenant, { mouvements, analyses: ok, limiteParJour: droits.parisParJour, conviction: droits.conviction });
+  }, [selections, ctx, etat.paris, maintenant, mouvements, analyses, droits]);
 }

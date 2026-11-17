@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { useCalculs, useDonnees } from "@/lib/donnees";
+import { PageVerrouillee } from "@/components/Offres";
 import { combosJackpot, simplesJackpot } from "@/lib/engine/modes";
 import { miseJackpot } from "@/lib/engine/mise";
 import { cote, dateMatch, eur, pctSigne } from "@/lib/format";
@@ -10,14 +11,14 @@ import { emojiSport } from "@/lib/sports";
 import { CarteCombo, ModalPari, type ProjetPari } from "@/components/Paris";
 import { lienWinamax } from "@/lib/winamax";
 import { Bouton, Carte, Jauge, Puces, Titre, Vide } from "@/components/ui";
-import { IcDiamant, IcExterne, IcInfo } from "@/components/Icones";
+import { IcAlerte, IcDiamant, IcExterne, IcInfo } from "@/components/Icones";
 
 const CIBLES = [50, 100, 250, 500, 1000];
 const SIMPLES = [10, 20, 50];
 
 export default function Jackpot() {
   const { etat, majReglages } = useStore();
-  const { selections, chargement, maintenant } = useDonnees();
+  const { selections, chargement, maintenant, droits } = useDonnees();
   const { ctx, bk } = useCalculs();
   const j = etat.reglages.jackpot;
   const [projet, setProjet] = useState<ProjetPari | null>(null);
@@ -25,6 +26,14 @@ export default function Jackpot() {
 
   const combos = useMemo(() => combosJackpot(selections, etat.reglages, maintenant), [selections, etat.reglages, maintenant]);
   const simples = useMemo(() => simplesJackpot(selections, etat.reglages, maintenant), [selections, etat.reglages, maintenant]);
+
+  if (!droits.jackpot) {
+    return (
+      <PageVerrouillee test={(d) => d.jackpot} titre="Jackpot" icone={<IcDiamant />}>
+        De toutes petites mises sur de très grosses cotes, pour rêver sans mettre ta bankroll en danger. Mode fun à haut risque, sans accompagnement du conseiller.
+      </PageVerrouillee>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -36,6 +45,14 @@ export default function Jackpot() {
           <h1 className="text-xl font-bold tracking-tight">Jackpot</h1>
           <p className="text-[14px] text-doux">Des miettes de mise sur de très grosses cotes. Pour rêver, sans jamais mettre ta bankroll en danger.</p>
         </div>
+      </div>
+
+      <div className="flex gap-2 rounded-2xl border border-negatif/30 bg-negatif/10 p-3 text-[12px] leading-relaxed text-negatif">
+        <IcAlerte className="mt-0.5 shrink-0 text-sm" />
+        <p>
+          <strong>Mode à haut risque, hors accompagnement.</strong> Le conseiller ne gère pas ces paris : pas de plan, pas de mise relevée, pas de suivi en temps réel ni de
+          notification. Ils restent limités à leur petite poche pour ne jamais toucher ta bankroll sérieuse.
+        </p>
       </div>
 
       <Carte accent="#fbbf24">

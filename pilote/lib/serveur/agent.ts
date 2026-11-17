@@ -8,7 +8,9 @@ import { planDuJour, recapDepuis, type Plan } from "../engine/conseiller";
 import { reglerParis } from "../engine/reglement";
 import { construireSelections } from "../engine/valeur";
 import { aHeure, cleJour, parties } from "../engine/temps";
-import { eur } from "../format";
+import { evaluerPariDirect, titreConseil, type Conseil } from "../engine/direct";
+import { droitsDe, type Droits } from "../offres";
+import { eur, eurSigne } from "../format";
 
 export interface SessionResumee {
   id: string;
@@ -16,6 +18,7 @@ export interface SessionResumee {
   libelle: string;
   nb: number;
   total: number;
+  boostes?: number;
   envoye?: boolean;
 }
 
@@ -32,6 +35,8 @@ export interface MetaProfil {
   derniereOuverture?: string;
   matinEnvoye?: string;
   plan?: PlanResume;
+  reglesNotifies?: string[]; // paris dont le résultat a déjà été notifié
+  alertesDirect?: Record<string, Conseil>; // dernier conseil de cash-out notifié par pari
 }
 
 export interface NotificationAgent {
@@ -53,7 +58,14 @@ export function resumerPlan(plan: Plan, jour: string, source: PlanResume["source
     jour,
     verdict: plan.verdict,
     message: plan.message,
-    sessions: plan.sessions.map((s) => ({ id: s.id, heure: s.heure, libelle: s.libelle, nb: s.items.length, total: Math.round(s.total * 100) / 100 })),
+    sessions: plan.sessions.map((s) => ({
+      id: s.id,
+      heure: s.heure,
+      libelle: s.libelle,
+      nb: s.items.length,
+      total: Math.round(s.total * 100) / 100,
+      boostes: s.items.filter((i) => i.boost > 1.001).length,
+    })),
     calculeLe: new Date(maintenant).toISOString(),
     source,
   };
@@ -67,6 +79,7 @@ export function fusionnerPlans(ancien: PlanResume | undefined, nouveau: PlanResu
 }
 
 function phrasePlan(p: PlanResume): string {
+  if (p.verdict === "limite") return "Tu as atteint la limite de paris de ton offre pour aujourd'hui.";
   if (p.verdict !== "jouer" || p.sessions.length === 0) return "Aujourd'hui, pas d'indice de confiance assez élevé pour jouer : on se repose.";
   const n = p.sessions.reduce((t, s) => t + s.nb, 0);
   const total = p.sessions.reduce((t, s) => t + s.total, 0);
@@ -80,8 +93,14 @@ export async function tacheProfil(
   metaInitiale: MetaProfil,
   maintenant: number,
   deps: Dependances,
+  droits: Droits = droitsDe("elite"),
 ): Promise<{ notifications: NotificationAgent[]; meta: MetaProfil }> {
-  const meta: MetaProfil = { ...metaInitiale, plan: metaInitiale.plan ? { ...metaInitiale.plan, sessions: metaInitiale.plan.sessions.map((s) => ({ ...s })) } : undefined };
+  const meta: MetaProfil = {
+    ...metaInitiale,
+    plan: metaInitiale.plan ? { ...metaInitiale.plan, sessions: metaInitiale.plan.sessions.map((s) => ({ ...s })) } : undefined,
+    reglesNotifies: [...(metaInitiale.reglesNotifies ?? [])],
+    alertesDirect: { ...(metaInitiale.alertesDirect ?? {}) },
+  };
   const r = etat.reglages;
   const tz = r.conseiller.fuseau;
   const jour = cleJour(maintenant, tz);
@@ -108,12 +127,13 @@ export async function tacheProfil(
       const etatAJour = { ...etat, paris: parisAJour };
       const bk = calculerBankroll(etatAJour);
       const ctx = { reglages: r, poches: bk.poches, total: bk.total, protections: protections(r, parisAJour, bk, maintenant) };
-      meta.plan = fusionnerPlans(meta.plan, resumerPlan(planDuJour(selections, ctx, parisAJour, maintenant), jour, "serveur", maintenant));
+      const plan = planDuJour(selections, ctx, parisAJour, maintenant, { limiteParJour: droits.parisParJour, conviction: droits.conviction });
+      meta.plan = fusionnerPlans(meta.plan, resumerPlan(plan, jour, "serveur", maintenant));
       // Les paris « maintenant » sont annoncés dans la notification du matin.
       for (const s of meta.plan.sessions) if (s.id.endsWith("maintenant")) s.envoye = true;
     }
     const ouvertCeMatin = !!meta.derniereOuverture && Date.parse(meta.derniereOuverture) >= aHeure(maintenant, tz, Math.max(0, r.conseiller.heureRecap - 2), 0);
-    if (!ouvertCeMatin) {
+    if (!ouvertCeMatin && droits.notifMatin) {
       const depuis = meta.derniereOuverture ? Date.parse(meta.derniereOuverture) : maintenant - 24 * 3_600_000;
       const recap = recapDepuis(parisAJour, depuis, maintenant, tz);
       notifications.push({
@@ -126,7 +146,7 @@ export async function tacheProfil(
   }
 
   // 2. Les heures de jeu.
-  if (meta.plan?.jour === jour) {
+  if (meta.plan?.jour === jour && droits.notifHeureJeu) {
     for (const s of meta.plan.sessions) {
       if (s.envoye) continue;
       const t = Date.parse(s.heure);
@@ -141,6 +161,56 @@ export async function tacheProfil(
         actions: [{ action: "valider", title: "Valider" }],
         urlAction: `/?session=${encodeURIComponent(s.id)}&valider=1`,
       });
+    }
+  }
+
+  // 3. Le temps réel (mode Classique uniquement) : résultats, bankroll recalculée, conseils pendant le match.
+  if (droits.tempsReel || droits.direct) {
+    const suivis = etat.paris.filter((p) => p.mode === "classique" && p.statut === "en_cours" && p.jambes.some((j) => j.statut === "en_cours" && Date.parse(j.commence) <= maintenant));
+    if (suivis.length) {
+      const sports = [...new Set(suivis.flatMap((p) => p.jambes.map((j) => j.sportKey)))];
+      const sc = await deps.scores(sports).catch(() => []);
+      const regles = new Map(reglerParis(suivis, sc, maintenant).map((p) => [p.id, p]));
+      const parisAJour = etat.paris.map((p) => regles.get(p.id) ?? p);
+      const bk = calculerBankroll({ ...etat, paris: parisAJour });
+
+      if (droits.tempsReel) {
+        for (const p of regles.values()) {
+          if (p.statut === "en_cours" || meta.reglesNotifies!.includes(p.id)) continue;
+          meta.reglesNotifies!.push(p.id);
+          const nom = p.jambes.length > 1 ? `Combiné à ${p.jambes.length} sélections` : p.jambes[0]?.label ?? "Pari";
+          const profit = (p.gain ?? 0) - p.mise;
+          const prochaine = meta.plan?.jour === jour ? meta.plan.sessions.find((s) => !s.envoye && Date.parse(s.heure) > maintenant) : undefined;
+          let suite: string;
+          if (p.statut === "perdu") {
+            suite = " Je ne cours pas après la perte : la prochaine mise suit la bankroll, elle baisse donc un peu.";
+            if (prochaine) suite += prochaine.boostes ? ` Prochain rendez-vous à ${prochaine.libelle}, et c'est une vraie occasion : mise relevée car la cote est exceptionnelle.` : ` Prochain rendez-vous à ${prochaine.libelle}, mise normale.`;
+            else suite += " Rien d'autre d'assez solide aujourd'hui.";
+          } else if (p.statut === "gagne") {
+            suite = " Les prochaines mises sont recalculées sur ce nouveau montant." + (prochaine ? ` Prochain rendez-vous à ${prochaine.libelle}.` : "");
+          } else suite = "";
+          notifications.push({
+            titre: p.statut === "gagne" ? `✅ Gagné : ${eurSigne(profit)}` : p.statut === "perdu" ? `❌ Perdu : ${eurSigne(profit)}` : "↩️ Pari remboursé",
+            texte: `${nom} à ${p.cote.toFixed(2).replace(".", ",")}. Bankroll : ${eur(bk.total)}.${suite}`,
+            url: "/suivi",
+            tag: `resultat-${p.id}`,
+          });
+        }
+        meta.reglesNotifies = meta.reglesNotifies!.slice(-200);
+      }
+
+      if (droits.direct) {
+        const encore = suivis.filter((p) => (regles.get(p.id)?.statut ?? "en_cours") === "en_cours").map((p) => regles.get(p.id) ?? p);
+        if (encore.length) {
+          const events = await deps.cotes(sports, etat.reglages.marches).catch(() => []);
+          for (const p of encore) {
+            const e = evaluerPariDirect(p, sc, events, maintenant, bk.total);
+            if (!e || e.conseil === "garder" || meta.alertesDirect![p.id] === e.conseil) continue;
+            meta.alertesDirect![p.id] = e.conseil;
+            notifications.push({ titre: titreConseil(e, p), texte: e.message, url: "/?direct=1", tag: `direct-${p.id}` });
+          }
+        }
+      }
     }
   }
 

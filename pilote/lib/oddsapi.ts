@@ -7,7 +7,7 @@ import { BOOKMAKERS_API } from "./sports";
 
 const BASE = "https://api.the-odds-api.com/v4";
 const TTL_COTES = 10 * 60_000;
-const TTL_SCORES = 20 * 60_000;
+const TTL_SCORES = 5 * 60_000; // court : les scores servent au suivi en temps réel
 const TTL_SPORTS = 6 * 3_600_000;
 
 interface Entree<T> {
@@ -81,7 +81,7 @@ function normaliser(e: ApiEvent): SportEvent {
   return { id: e.id, sportKey: e.sport_key, sportTitle: e.sport_title, commence: e.commence_time, home: e.home_team, away: e.away_team, bookmakers };
 }
 
-export async function cotesLive(sport: string, marches: MarketKey[]): Promise<SportEvent[]> {
+export async function cotesLive(sport: string, marches: MarketKey[], ttl = TTL_COTES): Promise<SportEvent[]> {
   const data = await appeler<ApiEvent[]>(
     `/sports/${sport}/odds`,
     {
@@ -91,7 +91,7 @@ export async function cotesLive(sport: string, marches: MarketKey[]): Promise<Sp
       dateFormat: "iso",
       includeLinks: "true",
     },
-    TTL_COTES,
+    ttl,
   );
   return data.map(normaliser);
 }
@@ -106,8 +106,8 @@ interface ApiScore {
   scores: { name: string; score: string }[] | null;
 }
 
-export async function scoresLive(sport: string, joursAvant: number): Promise<ScoreEvent[]> {
-  const data = await appeler<ApiScore[]>(`/sports/${sport}/scores`, { daysFrom: String(joursAvant), dateFormat: "iso" }, TTL_SCORES);
+export async function scoresLive(sport: string, joursAvant: number, ttl = TTL_SCORES): Promise<ScoreEvent[]> {
+  const data = await appeler<ApiScore[]>(`/sports/${sport}/scores`, { daysFrom: String(joursAvant), dateFormat: "iso" }, ttl);
   return data.map((s) => ({
     id: s.id,
     sportKey: s.sport_key,

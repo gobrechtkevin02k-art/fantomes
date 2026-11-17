@@ -8,6 +8,7 @@ import { statistiques } from "@/lib/engine/bankroll";
 import { cote, dateLongue, eur, eurSigne, pct, pctSigne } from "@/lib/format";
 import Graphique from "@/components/Graphique";
 import CarteConseiller from "@/components/Conseiller";
+import CarteDirect from "@/components/Direct";
 import { Badge, Barre, Bouton, COULEUR_MODE, Carte, NOM_MODE, Stat, Titre } from "@/components/ui";
 import { IcAlerte, IcBouclier, IcChevron, IcCible, IcDiamant, IcEclair, IcRafraichir } from "@/components/Icones";
 import type { Mode } from "@/lib/types";
@@ -114,6 +115,7 @@ export default function Accueil() {
         </div>
       )}
 
+      <CarteDirect />
       <CarteConseiller sessionCible={sessionCible} />
 
       <Carte>

@@ -4,6 +4,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import type { AnalyseIA, VerdictIA } from "../types";
+import { skillsPour } from "./skills";
 
 export const MODELE_ANALYSE = process.env.ANALYSE_MODELE?.trim() || "claude-opus-5-5";
 
@@ -109,7 +110,7 @@ export async function analyserMatch(d: DemandeAnalyse): Promise<AnalyseIA> {
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       output_config: { effort: "medium" },
-      system: SYSTEME,
+      system: [SYSTEME, skillsPour(d.sport)].filter(Boolean).join("\n\n"),
       tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 5 }, OUTIL_ANALYSE],
       messages,
     });

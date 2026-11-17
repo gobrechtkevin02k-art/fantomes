@@ -12,7 +12,7 @@ import { useStore } from "./store";
 import { useDonnees, usePlan } from "./donnees";
 import { eur, uid } from "./format";
 
-export type EtatNotifications = "chargement" | "non_supporte" | "ios_installer" | "serveur_absent" | "refuse" | "inactif" | "actif";
+export type EtatNotifications = "chargement" | "non_supporte" | "ios_installer" | "serveur_absent" | "offre" | "refuse" | "inactif" | "actif";
 
 interface ContexteAutonomie {
   notifications: EtatNotifications;
@@ -41,12 +41,12 @@ const estInstallee = () =>
 
 export function AutonomieProvider({ children }: { children: ReactNode }) {
   const { pret, etat, ajouterParis, marquerVisite } = useStore();
-  const { statut, source, notifier } = useDonnees();
+  const { statut, source, notifier, droits } = useDonnees();
   const plan = usePlan();
   const [notifications, setNotifications] = useState<EtatNotifications>("chargement");
   const [ticket, setTicket] = useState<Pari[] | null>(null);
   const profilId = etat.profilId;
-  const synchro = statut ? statut.stockage !== "memoire" : false;
+  const synchro = statut ? statut.stockage !== "memoire" && droits.synchro : false;
 
   // Service worker + état des notifications.
   const evaluer = useCallback(async () => {
@@ -56,11 +56,12 @@ export function AutonomieProvider({ children }: { children: ReactNode }) {
     }
     if (!statut) return;
     if (!statut.push) return setNotifications("serveur_absent");
+    if (!droits.notifMatin) return setNotifications("offre");
     if (Notification.permission === "denied") return setNotifications("refuse");
     const reg = await navigator.serviceWorker.getRegistration();
     const sub = await reg?.pushManager.getSubscription();
     setNotifications(sub && Notification.permission === "granted" ? "actif" : "inactif");
-  }, [statut]);
+  }, [statut, droits.notifMatin]);
 
   useEffect(() => {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
@@ -116,6 +117,7 @@ export function AutonomieProvider({ children }: { children: ReactNode }) {
 
   // Quand l'appli est ouverte : rappel local à l'heure de chaque session à venir.
   useEffect(() => {
+    if (!droits.notifHeureJeu) return;
     const timers = plan.sessions
       .filter((s) => !s.ouverte)
       .map((s: Session) => {
@@ -140,10 +142,10 @@ export function AutonomieProvider({ children }: { children: ReactNode }) {
         }, delai);
       });
     return () => timers.forEach((t) => t && clearTimeout(t));
-  }, [plan.sessions, notifier]);
+  }, [plan.sessions, notifier, droits.notifHeureJeu]);
 
   const activerNotifications = useCallback(async () => {
-    if (!statut?.push) return;
+    if (!statut?.push || !droits.notifMatin) return;
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
@@ -164,7 +166,7 @@ export function AutonomieProvider({ children }: { children: ReactNode }) {
       notifier("Impossible d'activer les notifications sur cet appareil.", "alerte");
       evaluer();
     }
-  }, [statut, profilId, etat, notifier, evaluer]);
+  }, [statut, droits.notifMatin, profilId, etat, notifier, evaluer]);
 
   const desactiverNotifications = useCallback(async () => {
     const reg = await navigator.serviceWorker.getRegistration();

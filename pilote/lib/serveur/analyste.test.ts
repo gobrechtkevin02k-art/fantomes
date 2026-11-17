@@ -12,7 +12,7 @@ import { analyserMatch } from "./analyste";
 
 const demande = {
   id: "e1|h2h|A",
-  sport: "Football",
+  sport: "soccer",
   competition: "Ligue 1",
   debut: "2026-11-21T20:00:00Z",
   domicile: "Lens",
@@ -53,6 +53,8 @@ describe("analyste IA", () => {
     expect(params.model).toBe("claude-opus-5-5");
     expect(params.fallbacks).toBe("default");
     expect(params.tools[0].type).toBe("web_search_20260209");
+    expect(params.system).toContain("Compositions"); // fiche football chargée
+    expect(params.system).toContain("Méthode de l'analyste Pilote");
     expect(create.mock.calls[1][0].messages).toHaveLength(2); // la réponse en pause est renvoyée telle quelle
     expect(a.verdict).toBe("prudence");
     expect(a.attendreCompositions).toBe(true);
