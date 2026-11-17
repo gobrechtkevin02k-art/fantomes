@@ -74,7 +74,7 @@ npm test                     # tests du moteur
 3. Déploie, puis ouvre l'URL sur ton téléphone et « Ajouter à l'écran d'accueil ».
 4. **Réveil de l'agent.** `vercel.json` déclare un passage quotidien (vers 7h, heure de Paris en hiver), c'est le maximum autorisé par l'offre gratuite de Vercel. Pour les notifications à l'heure de jeu, crée une tâche gratuite sur [cron-job.org](https://cron-job.org) qui appelle toutes les 15 minutes `https://ton-site.vercel.app/api/cron` avec l'en-tête `Authorization: Bearer <CRON_SECRET>` (ou l'URL `…/api/cron?cle=<CRON_SECRET>`).
 
-**Coûts à prévoir.** The Odds API : 500 crédits gratuits par mois, juste pour un usage léger ; avec l'agent qui prépare le plan chaque matin, l'offre à 20 000 crédits est plus confortable. Analyste IA : chaque analyse (modèle Claude + quelques recherches web) coûte de l'ordre de quelques centimes ; elles sont gardées en cache 3 h et limitées à 30 par heure (`ANALYSE_MAX_HEURE`).
+**Coûts à prévoir.** The Odds API : 500 crédits gratuits par mois, juste pour un usage léger ; avec l'agent qui prépare le plan chaque matin, l'offre à 20 000 crédits est plus confortable. Analyste IA : chaque analyse (modèle Claude Opus 5.5 + quelques recherches web) coûte environ 10 à 20 centimes ; elles sont gardées en cache 3 h et limitées à 30 par heure (`ANALYSE_MAX_HEURE`).
 
 **Quota :** une actualisation coûte (nombre de compétitions × nombre de marchés) crédits. Les cotes sont mises en cache 10 min côté serveur et 30 min dans le navigateur ; le nombre de crédits restants s'affiche dans les réglages.
 
