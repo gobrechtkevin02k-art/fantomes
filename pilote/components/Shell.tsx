@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import { useStore } from "@/lib/store";
 import { useCalculs, useDonnees } from "@/lib/donnees";
 import { depuis, eur } from "@/lib/format";
-import { IcAccueil, IcBouclier, IcCible, IcDiamant, IcEclair, IcGraphique, IcRafraichir, IcReglages, Logo } from "./Icones";
+import { IcAccueil, IcBouclier, IcCible, IcDiamant, IcEclair, IcGraphique, IcRafraichir, IcReglages, IcTrophee, Logo } from "./Icones";
 import { cx } from "./ui";
 import Onboarding from "./Onboarding";
 import { ModalTicket } from "./Conseiller";
@@ -20,6 +20,7 @@ const NAV = [
   { href: "/objectif", label: "Objectif", Icone: IcCible, couleur: "#a78bfa" },
   { href: "/jackpot", label: "Jackpot", Icone: IcDiamant, couleur: "#fbbf24" },
   { href: "/suivi", label: "Suivi", Icone: IcGraphique, couleur: "#e9eef3" },
+  { href: "/resultats", label: "Résultats", Icone: IcTrophee, couleur: "#fbbf24" },
 ];
 
 function Source() {
@@ -105,7 +106,26 @@ export default function Shell({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (!etat.onboarding) return <Onboarding />;
+  if (!etat.onboarding) {
+    // La page Résultats est publique : visible même sans avoir configuré l'appli.
+    if (chemin.startsWith("/resultats")) {
+      return (
+        <div className="mx-auto max-w-4xl px-4 pb-10">
+          <header className="flex h-14 items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <Logo className="size-7" />
+              <span className="text-[16px] font-bold tracking-tight">Pilote</span>
+            </Link>
+            <Link href="/" className="rounded-xl bg-texte px-3.5 py-2 text-[13px] font-semibold text-fond">
+              Essayer Pilote
+            </Link>
+          </header>
+          {children}
+        </div>
+      );
+    }
+    return <Onboarding />;
+  }
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-6xl">
@@ -167,10 +187,10 @@ export default function Shell({ children }: { children: ReactNode }) {
 
       {/* Barre d'onglets (mobile) */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-ligne bg-fond/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-5">
+        <div className="mx-auto grid max-w-lg grid-cols-6">
           {NAV.map(({ href, label, Icone, couleur }) => (
-            <Link key={href} href={href} className="relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium" style={{ color: actif(href) ? couleur : "#5d6875" }}>
-              <Icone className="text-[22px]" />
+            <Link key={href} href={href} className="relative flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium" style={{ color: actif(href) ? couleur : "#5d6875" }}>
+              <Icone className="text-[21px]" />
               {label}
               {verrouille(href) && <Cadenas className="absolute top-1.5 right-[22%] text-[11px]" />}
             </Link>

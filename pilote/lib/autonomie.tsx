@@ -41,12 +41,13 @@ const estInstallee = () =>
 
 export function AutonomieProvider({ children }: { children: ReactNode }) {
   const { pret, etat, ajouterParis, marquerVisite } = useStore();
-  const { statut, source, notifier, droits } = useDonnees();
+  const { statut, source, notifier, droits, abonnement } = useDonnees();
   const plan = usePlan();
   const [notifications, setNotifications] = useState<EtatNotifications>("chargement");
   const [ticket, setTicket] = useState<Pari[] | null>(null);
   const profilId = etat.profilId;
-  const synchro = statut ? statut.stockage !== "memoire" && droits.synchro : false;
+  // Le compte public est toujours synchronisé : c'est lui qui alimente l'onglet Résultats.
+  const synchro = statut ? statut.stockage !== "memoire" && (droits.synchro || !!abonnement.public) : false;
 
   // Service worker + état des notifications.
   const evaluer = useCallback(async () => {

@@ -57,6 +57,16 @@ Paiement par Stripe (Checkout, portail client, webhook). Limites et prix dans `l
 - **Suivi en direct** (Élite) : probabilité actuelle du pari, d'après les cotes en direct ou, à défaut, un modèle score + temps. Conseil « sécuriser » (gros gain bien parti) ou « limiter la casse », avec le montant minimum de cash-out à accepter sur Winamax.
 - Les modes Objectif cote et Jackpot sont à haut risque : ni plan, ni mise relevée, ni notification.
 
+## Résultats publics (transparence totale)
+
+L'onglet **Résultats** montre à tous (abonnés et visiteurs, sans inscription) le compte réel du fondateur, désigné par `PILOTE_PROFIL_PUBLIC`, depuis le premier dépôt :
+- bankroll, argent déposé (premier dépôt et réinjections), argent retiré, résultat des paris et ROI. Seul le résultat des paris mesure la performance : l'argent déposé n'est jamais compté comme un gain ;
+- courbe du résultat des paris et courbe de la bankroll ;
+- paris en cours avec le score en direct, et résultat officiel affiché dès la fin du match (actualisation toutes les 30 secondes) ;
+- **journal du compte** : chaque dépôt, retrait, pari, résultat, correction et suppression, horodaté à la réception par le serveur. Un pari enregistré après le coup d'envoi est signalé.
+
+Le journal ne fait qu'ajouter des entrées, et chacune contient l'empreinte SHA-256 de la précédente. Le navigateur du visiteur recalcule toute la chaîne et affiche « intacte » ou l'entrée altérée. Les paris faits en mode démo n'y figurent jamais.
+
 ## Skills de l'analyste IA
 
 Les fiches `skills/<nom>/SKILL.md` (méthode générale, football, basket, tennis) sont ajoutées aux instructions de l'analyste selon le sport du match. Pour enrichir l'expertise, il suffit d'éditer ou d'ajouter une fiche.

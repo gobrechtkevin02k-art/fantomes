@@ -27,12 +27,21 @@ Tout est sur GitHub, dépôt `fantomes`, branche `claude/winamax-betting-tool-ul
 | Skills pour l'IA | Fait : fiches d'expertise `skills/` (méthode, football, basket, tennis) |
 | Temps réel et gestion de bankroll uniquement sur le Classique ; modes fun sans notification | Fait |
 | Offres d'abonnement | Fait : 4 niveaux (ci-dessous) |
+| Onglet Résultats : compte réel depuis le 1er dépôt, en temps réel, retraits et réinjections visibles | Fait (journal public scellé, voir 1 bis) |
 
 ### Pourquoi l'agent ne monte pas la mise *à cause* d'une perte
 Monter la mise pour « se refaire » après une perte est la principale cause de ruine d'une bankroll, même avec un bon modèle. Pilote fait donc ceci :
 - après une perte, l'agent te prévient et t'indique la prochaine occasion ;
 - la mise suit la bankroll (elle baisse donc un peu après une perte et remonte après un gain) ;
 - elle n'est **relevée** que si le pari lui-même est exceptionnel (indice ≥ 85 et cote au moins 4 % au-dessus du juste prix), exactement comme les autres jours. La perte précédente ne joue jamais.
+
+### 1 bis. L'onglet Résultats (transparence totale)
+- Visible par tout le monde, même sans compte : un argument de vente en soi.
+- Affiche la bankroll, l'argent déposé (1er dépôt + réinjections), l'argent retiré, le résultat des paris, la courbe, les paris en cours avec le score en direct.
+- **Journal du compte** : chaque opération y entre automatiquement, y compris les suppressions et corrections. Rien ne peut en être retiré : chaque ligne est scellée avec l'empreinte de la précédente, et le téléphone de chaque visiteur vérifie que la chaîne est intacte.
+- L'heure qui fait foi est celle du serveur : un pari enregistré après le début du match est signalé.
+- Conseil : commence le compte public avec ton vrai premier dépôt, et utilise « Synchroniser mon solde » quand ton solde Winamax diffère (la correction apparaîtra, c'est normal et honnête).
+- **Avant de lancer** : ouvre un nouveau profil « propre » pour le compte public (sans tes paris d'essai), puis mets son code dans `PILOTE_PROFIL_PUBLIC`. Le journal s'ouvre à sa première synchronisation.
 
 ### Pourquoi le dernier clic se fait sur Winamax
 Winamax n'a pas d'API publique pour parier. Un robot connecté avec tes identifiants mettrait ton compte (et ton argent) en danger. Pilote fait tout le reste : choix, mise, heure, enregistrement, suivi, résultats.
@@ -79,6 +88,7 @@ Tout se règle dans `lib/offres.ts` (prix, limites, textes) : une seule ligne à
 | `STRIPE_SECRET_KEY` | tableau de bord Stripe (commence par `sk_test_` pour les essais) |
 | `STRIPE_WEBHOOK_SECRET` | Stripe → Développeurs → Webhooks (voir 3.4) |
 | `PILOTE_ACCES_COMPLET` | **ton** code personnel (Pilote → Réglages → Synchronisation) : tu as tout débloqué sans payer |
+| `PILOTE_PROFIL_PUBLIC` | **le même code** : ton compte réel alimente l'onglet Résultats public (journal scellé) |
 | `APP_PASSWORD` | à garder pendant les tests ; **à retirer** quand tu vends l'appli (sinon tes clients sont bloqués) |
 
 ### 3.3 Réveil de l'agent

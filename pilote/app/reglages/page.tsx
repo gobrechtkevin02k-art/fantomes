@@ -127,6 +127,11 @@ export default function Reglages() {
           {droits.analysesIAParJour ? `${droits.analysesIAParJour} analyse${droits.analysesIAParJour > 1 ? "s" : ""} IA par jour` : "pas d'analyse IA"} ·{" "}
           {droits.direct ? "suivi en direct" : droits.tempsReel ? "temps réel" : droits.notifMatin ? "récap du matin" : "sans notification"}
         </p>
+        {abonnement.public && (
+          <p className="mt-3 rounded-xl bg-jackpot/10 p-3 text-[12px] leading-relaxed text-jackpot">
+            Ton compte est public : il alimente l&apos;onglet Résultats. Dépôts, retraits, paris, résultats et corrections y sont visibles par tes abonnés, dans un journal scellé.
+          </p>
+        )}
       </Carte>
 
       <Carte accent="#34d399">

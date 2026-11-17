@@ -21,6 +21,7 @@ const STATUT: Record<StatutPari, { l: string; c: string }> = {
 
 function LignePari({ p, onRegler }: { p: Pari; onRegler: (p: Pari) => void }) {
   const { supprimerPari, majParis } = useStore();
+  const publicCompte = !!useDonnees().abonnement.public;
   const st = STATUT[p.statut];
   const profit = (p.gain ?? 0) - p.mise;
   return (
@@ -85,7 +86,7 @@ function LignePari({ p, onRegler }: { p: Pari; onRegler: (p: Pari) => void }) {
           variante="fantome"
           className="ml-auto min-h-9 text-[13px]"
           onClick={() => {
-            if (confirm("Supprimer ce pari de l'historique ?")) supprimerPari(p.id);
+            if (confirm(publicCompte ? "Supprimer ce pari ? La suppression sera visible dans le journal public des Résultats." : "Supprimer ce pari de l'historique ?")) supprimerPari(p.id);
           }}
           aria-label="Supprimer le pari"
         >
@@ -167,7 +168,7 @@ function BlocStats({ s, titre, couleur }: { s: Stats; titre: string; couleur: st
 function Mouvements() {
   const { etat, ajouterMouvement, supprimerMouvement } = useStore();
   const { bk } = useCalculs();
-  const { notifier } = useDonnees();
+  const { notifier, abonnement } = useDonnees();
   const [type, setType] = useState<"depot" | "retrait" | "synchro">("depot");
   const [montant, setMontant] = useState("");
   const m = Number(montant.replace(",", "."));
@@ -194,6 +195,11 @@ function Mouvements() {
     <div className="space-y-4">
       <Carte>
         <Titre sous="Garde Pilote aligné sur ton vrai compte Winamax.">Dépôts, retraits et synchronisation</Titre>
+        {abonnement.public && (
+          <p className="mb-3 rounded-xl bg-jackpot/10 p-3 text-[12px] text-jackpot">
+            Compte public : chaque dépôt, retrait et correction apparaît dans l&apos;onglet Résultats, visible par tes abonnés.
+          </p>
+        )}
         <Puces
           label="Type d'opération"
           valeur={type}
@@ -255,7 +261,11 @@ function Mouvements() {
                       {eurSigne(mv.montant)}
                     </span>
                   )}
-                  <button onClick={() => supprimerMouvement(mv.id)} className="grid size-8 place-items-center rounded-full text-faible hover:bg-surface-2 hover:text-texte" aria-label="Supprimer l'opération">
+                  <button
+                    onClick={() => {
+                      if (!abonnement.public || confirm("Supprimer cette opération ? La suppression sera visible dans le journal public des Résultats.")) supprimerMouvement(mv.id);
+                    }}
+                    className="grid size-8 place-items-center rounded-full text-faible hover:bg-surface-2 hover:text-texte" aria-label="Supprimer l'opération">
                     <IcPoubelle />
                   </button>
                 </div>

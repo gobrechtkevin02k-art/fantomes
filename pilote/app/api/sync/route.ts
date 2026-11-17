@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cleProfil, stockage } from "@/lib/serveur/stockage";
 import { fusionnerPlans, type MetaProfil, type PlanResume } from "@/lib/serveur/agent";
+import { estPublic, journaliser } from "@/lib/serveur/public";
 import type { EtatApp } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,9 @@ export async function POST(req: Request) {
   if (!cleProfil(id)) return NextResponse.json({ erreur: "Profil invalide." }, { status: 400 });
   const st = stockage();
   try {
-    if (c.etat && typeof c.etat === "object" && c.etat.profilId === id) {
+    if (c.etat && typeof c.etat === "object" && c.etat.profilId === id && Array.isArray(c.etat.paris) && Array.isArray(c.etat.mouvements)) {
+      // Compte public : chaque modification est inscrite dans le journal avant d'être enregistrée.
+      if (estPublic(id)) await journaliser(c.etat, await st.get<EtatApp>(`etat:${id}`));
       await st.set(`etat:${id}`, c.etat);
       await st.ajouterAEnsemble("profils", id);
     }

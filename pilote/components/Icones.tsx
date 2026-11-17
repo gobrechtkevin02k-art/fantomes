@@ -115,6 +115,14 @@ export const IcEclair = (p: P) => (
   </svg>
 );
 
+export const IcTrophee = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" />
+    <path d="M8 6H5a2.5 2.5 0 0 0 3 4M16 6h3a2.5 2.5 0 0 1-3 4" />
+    <path d="M12 13v4M9 20h6M10 17h4" />
+  </svg>
+);
+
 export function Logo({ className = "" }: { className?: string }) {
   // Identifiant unique : un dégradé défini dans un élément masqué (display:none) ne s'affiche pas ailleurs.
   const id = `lg${useId().replace(/[^a-zA-Z0-9]/g, "")}`;

@@ -18,6 +18,7 @@ const CLE_ABONNEMENT = "pilote:abonnement:v1";
 
 export interface Abonnement extends EtatAbonnement {
   paiement: boolean;
+  public?: boolean; // ce compte alimente l'onglet Résultats public
 }
 const TTL_ANALYSE = 3 * 3_600_000;
 
