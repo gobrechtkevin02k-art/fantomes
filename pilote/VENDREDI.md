@@ -4,13 +4,9 @@ Ce mémo regroupe toutes tes idées déjà intégrées, les manipulations à fai
 
 ---
 
-## 0. Urgent, faisable depuis ton téléphone : sauvegarder le travail
+## 0. Le code est sauvegardé
 
-Le code est enregistré dans la session Claude, mais **pas encore sur GitHub** (accès refusé). Si la session se ferme, le travail est perdu.
-
-1. Ouvre https://claude.ai/connect-github et reconnecte ton compte GitHub.
-2. Installe l'application Claude GitHub sur le dépôt `fantomes` (même page, ou https://github.com/apps/claude/installations/select_target).
-3. Écris à Claude : « c'est bon, pousse ». La branche s'appelle `claude/winamax-betting-tool-uly3of`.
+Tout est sur GitHub, dépôt `fantomes`, branche `claude/winamax-betting-tool-uly3of` (dossier `pilote/`). Fantômes n'a pas été touché. Pour mettre Pilote en ligne, il suffira de fusionner cette branche ou de pointer Vercel dessus.
 
 ---
 
