@@ -6,6 +6,7 @@ import { useStore } from "@/lib/store";
 import { useAutonomie } from "@/lib/autonomie";
 import { OFFRES, prixMensuel, type Droits } from "@/lib/offres";
 import { Verrou } from "@/components/Offres";
+import { GuideInstallation } from "@/components/Installation";
 import Link from "next/link";
 import type { EtatApp, ReglagesConseiller } from "@/lib/types";
 import { useCalculs, useDonnees } from "@/lib/donnees";
@@ -196,6 +197,15 @@ export default function Reglages() {
         {statut && !statut.ia && <p className="mt-3 text-[12px] text-faible">Analyse IA non activée sur ce serveur : ajoute la variable ANTHROPIC_API_KEY pour l&apos;activer.</p>}
       </Carte>
 
+      <div id="appli" className="scroll-mt-20">
+        <Carte>
+          <Titre sous="Une icône sur l'écran d'accueil, en plein écran, avec les notifications." action={<Link href="/installer" className="text-[13px] font-semibold text-objectif">Page à partager →</Link>}>
+            Application mobile
+          </Titre>
+          <GuideInstallation />
+        </Carte>
+      </div>
+
       <Carte>
         <Titre sous="Le bilan de la nuit le matin, puis un rappel à chaque heure de jeu.">Notifications</Titre>
         <div className="space-y-3 text-[14px]">
@@ -205,7 +215,7 @@ export default function Reglages() {
                 {
                   chargement: "Vérification…",
                   non_supporte: "Ce navigateur ne gère pas les notifications.",
-                  ios_installer: "Sur iPhone : ajoute d'abord Pilote à l'écran d'accueil, puis ouvre-le depuis l'icône.",
+                  ios_installer: "Sur iPhone : installe d'abord Pilote (carte « Application mobile » ci-dessus), puis ouvre-la depuis son icône.",
                   serveur_absent: "Le serveur n'a pas encore de clés de notification (VAPID).",
                   offre: "Incluses à partir de l'offre Essentiel (récap du matin) et Pro (heures de jeu, résultats).",
                   refuse: "Bloquées dans les réglages du navigateur.",

@@ -47,6 +47,7 @@ export interface NotificationAgent {
   tag: string;
   actions?: { action: string; title: string }[];
   urlAction?: string;
+  badge?: number;
 }
 
 export interface Dependances {
@@ -161,6 +162,7 @@ export async function tacheProfil(
         tag: s.id,
         actions: [{ action: "valider", title: "Valider" }],
         urlAction: `/?session=${encodeURIComponent(s.id)}&valider=1`,
+        badge: s.nb,
       });
     }
   }

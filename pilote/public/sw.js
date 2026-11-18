@@ -1,7 +1,69 @@
-// Service worker de Pilote : affiche les notifications push et ouvre l'application au bon endroit.
+// Service worker de Pilote : notifications push, pastille sur l'icône, ouverture rapide et page hors ligne.
 
-self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
+const CACHE = "pilote-v2";
+const HORS_LIGNE = "/hors-ligne.html";
+const COQUILLE = [HORS_LIGNE, "/icones/icone-192.png", "/icones/badge-96.png", "/icon.svg"];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((c) => c.addAll(COQUILLE))
+      .catch(() => {})
+      .then(() => self.skipWaiting()),
+  );
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((cles) => Promise.all(cles.filter((c) => c.startsWith("pilote-") && c !== CACHE).map((c) => caches.delete(c))))
+      .then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
+  // Pages : toujours le réseau (cotes et résultats à jour) ; sans connexion, la page hors ligne.
+  if (req.mode === "navigate") {
+    event.respondWith(fetch(req).catch(() => caches.match(HORS_LIGNE).then((r) => r || Response.error())));
+    return;
+  }
+
+  // Fichiers du site versionnés (leur nom contient une empreinte qui change à chaque mise à jour) et icônes :
+  // servis depuis le téléphone. Les fichiers sans empreinte (mode développement) passent par le réseau.
+  const versionne = /^\/_next\/static\/(chunks|css|media)\/(?:.*[-./])?[0-9a-f]{8,}\./.test(url.pathname);
+  if (versionne || url.pathname.startsWith("/icones/")) {
+    event.respondWith(
+      caches.open(CACHE).then((c) =>
+        c.match(req).then(
+          (r) =>
+            r ||
+            fetch(req).then((rep) => {
+              if (rep.ok) c.put(req, rep.clone());
+              return rep;
+            }),
+        ),
+      ),
+    );
+  }
+  // Tout le reste (API, cotes, résultats) passe directement par le réseau.
+});
+
+function pastille(n) {
+  try {
+    if (typeof n !== "number") return;
+    if (n > 0) self.navigator.setAppBadge?.(n);
+    else self.navigator.clearAppBadge?.();
+  } catch {
+    /* pastilles non prises en charge */
+  }
+}
 
 self.addEventListener("push", (event) => {
   let d = {};
@@ -10,6 +72,7 @@ self.addEventListener("push", (event) => {
   } catch {
     d = { texte: event.data ? event.data.text() : "" };
   }
+  pastille(d.badge);
   event.waitUntil(
     self.registration.showNotification(d.titre || "Pilote", {
       body: d.texte || "",

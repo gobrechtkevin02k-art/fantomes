@@ -145,6 +145,18 @@ export function AutonomieProvider({ children }: { children: ReactNode }) {
     return () => timers.forEach((t) => t && clearTimeout(t));
   }, [plan.sessions, notifier, droits.notifHeureJeu]);
 
+  // Pastille sur l'icône de l'appli installée : le nombre de paris à valider maintenant.
+  const aValider = plan.sessions.filter((s) => s.ouverte).reduce((t, s) => t + s.items.length, 0);
+  useEffect(() => {
+    if (!pret) return;
+    const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+    try {
+      (aValider > 0 ? nav.setAppBadge?.(aValider) : nav.clearAppBadge?.())?.catch(() => {});
+    } catch {
+      /* pastilles non prises en charge */
+    }
+  }, [pret, aValider]);
+
   const activerNotifications = useCallback(async () => {
     if (!statut?.push || !droits.notifMatin) return;
     try {
@@ -222,6 +234,11 @@ export function AutonomieProvider({ children }: { children: ReactNode }) {
       }));
       ajouterParis(paris);
       setTicket(paris);
+      try {
+        navigator.vibrate?.(15); // petit retour tactile (Android)
+      } catch {
+        /* vibreur indisponible */
+      }
       return paris;
     },
     [ajouterParis, source],

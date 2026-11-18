@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#090c11" />
+    <title>Pilote — hors connexion</title>
+    <style>
+      :root { color-scheme: dark; }
+      html, body { margin: 0; height: 100%; background: #090c11; color: #e9eef3; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+      main { min-height: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom)); }
+      img { width: 72px; height: 72px; }
+      h1 { margin: 20px 0 8px; font-size: 20px; letter-spacing: -0.01em; }
+      p { margin: 0; max-width: 320px; color: #8b97a4; font-size: 15px; line-height: 1.5; }
+      button { margin-top: 24px; min-height: 48px; padding: 0 22px; border: 0; border-radius: 14px; background: #e9eef3; color: #090c11; font: inherit; font-weight: 600; font-size: 15px; }
+      small { margin-top: 28px; color: #5d6875; font-size: 12px; max-width: 320px; line-height: 1.5; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icon.svg" alt="" />
+      <h1>Pas de connexion</h1>
+      <p>Pilote a besoin d'internet pour suivre les cotes Winamax en direct. Tes paris et ta bankroll sont bien gardés sur ton téléphone.</p>
+      <button onclick="location.reload()">Réessayer</button>
+      <small>Interdit aux moins de 18 ans. Jouer comporte des risques : endettement, isolement, dépendance. Pour être aidé, appelez le 09 74 75 13 13 (appel non surtaxé).</small>
+    </main>
+    <script>addEventListener("online", function () { location.reload(); });</script>
+  </body>
+</html>

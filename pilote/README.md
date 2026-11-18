@@ -108,6 +108,14 @@ Les fiches `skills/<nom>/SKILL.md` (méthode générale, football, basket, tenni
 5. **Garde-fous.** Limite de perte par jour et sur 7 jours, argent en jeu maximum, mode prudence (mises ÷ 2) après une baisse de 25 % depuis le plus haut, pause volontaire. Un objectif en retard n'augmente **jamais** les mises.
 6. **Suivi.** Règlement automatique des paris (1N2, plus/moins, handicap) à partir des scores, statistiques par gamme, courbe de bankroll, projection vers l'objectif, synchronisation avec le solde Winamax réel, export / import de sauvegarde.
 
+## Appli mobile
+
+Pilote s'installe comme une appli depuis son site, sur iPhone, Android et ordinateur, sans passer par les stores : icône sur l'écran d'accueil, plein écran, écrans de démarrage iPhone, icônes adaptatives Android, raccourcis, notifications push, pastille sur l'icône (nombre de paris à valider), page hors connexion et fichiers du site gardés sur le téléphone pour une ouverture rapide.
+
+- **Installation guidée** : bannière sur l'accueil (masquable 14 jours), carte « Application mobile » dans les Réglages et page publique `/installer` à partager. Bouton natif sur Android/Chrome, marche à suivre pour Safari et les autres navigateurs iPhone, QR code sur ordinateur (`/installer/qr`), message dédié dans les navigateurs intégrés (Instagram, Facebook, TikTok).
+- **Fichiers** : `app/manifest.ts`, `public/sw.js` (cache `pilote-vN`, à incrémenter quand les icônes changent), `public/hors-ligne.html`, `lib/installation.ts`, `components/Installation.tsx`, `lib/demarrage.ts`. Les icônes et écrans de démarrage sont générés par `node scripts/visuels.cjs`.
+- **Play Store (facultatif)** : `ANDROID_PACKAGE` et `ANDROID_SHA256` publient `/.well-known/assetlinks.json` pour une appli Android fabriquée avec PWABuilder ou Bubblewrap.
+
 ## Connexion à Winamax
 
 Winamax ne propose pas d'API publique, et confier ses identifiants à un robot qui parie à sa place exposerait le compte à une fermeture. Pilote récupère donc les **cotes Winamax en temps réel** via [The Odds API](https://the-odds-api.com) (bookmaker `winamax_fr`, comparé à Pinnacle, Betfair, Betclic, Unibet, PMU, NetBet…), calcule tout, puis tu valides le pari sur Winamax en deux touches. Les résultats sont réglés automatiquement.

@@ -23,6 +23,7 @@ export interface Notification {
   tag?: string;
   actions?: { action: string; title: string }[];
   urlAction?: string;
+  badge?: number; // pastille sur l'icône de l'appli installée (nombre de paris à valider)
 }
 
 const clePush = (id: string) => `push:${id}`;

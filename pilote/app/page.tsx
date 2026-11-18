@@ -9,6 +9,7 @@ import { cote, dateLongue, eur, eurSigne, pct, pctSigne } from "@/lib/format";
 import Graphique from "@/components/Graphique";
 import CarteConseiller from "@/components/Conseiller";
 import CarteDirect from "@/components/Direct";
+import { BanniereInstallation } from "@/components/Installation";
 import { Badge, Barre, Bouton, COULEUR_MODE, Carte, NOM_MODE, Stat, Titre } from "@/components/ui";
 import { IcAlerte, IcBouclier, IcChevron, IcCible, IcDiamant, IcEclair, IcRafraichir } from "@/components/Icones";
 import type { Mode } from "@/lib/types";
@@ -117,6 +118,7 @@ export default function Accueil() {
 
       <CarteDirect />
       <CarteConseiller sessionCible={sessionCible} />
+      <BanniereInstallation />
 
       <Carte>
         <div className="flex items-start justify-between gap-3">

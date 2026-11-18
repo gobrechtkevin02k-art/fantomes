@@ -131,6 +131,39 @@ export const IcJournal = (p: P) => (
   </svg>
 );
 
+export const IcPartager = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M12 3v12M8 7l4-4 4 4" />
+    <path d="M8 11H6a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-2" />
+  </svg>
+);
+export const IcAjouter = (p: P) => (
+  <svg {...base(p)}>
+    <rect x="4" y="4" width="16" height="16" rx="4" />
+    <path d="M12 8.5v7M8.5 12h7" />
+  </svg>
+);
+export const IcMenuPoints = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="5.5" r="1.2" fill="currentColor" />
+    <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+    <circle cx="12" cy="18.5" r="1.2" fill="currentColor" />
+  </svg>
+);
+export const IcPlusPoints = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="5.5" cy="12" r="1.2" fill="currentColor" />
+    <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+    <circle cx="18.5" cy="12" r="1.2" fill="currentColor" />
+  </svg>
+);
+export const IcTelephone = (p: P) => (
+  <svg {...base(p)}>
+    <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" />
+    <path d="M10.5 18.5h3" />
+  </svg>
+);
+
 export function Logo({ className = "" }: { className?: string }) {
   // Identifiant unique : un dégradé défini dans un élément masqué (display:none) ne s'affiche pas ailleurs.
   const id = `lg${useId().replace(/[^a-zA-Z0-9]/g, "")}`;

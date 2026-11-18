@@ -111,7 +111,7 @@ Sur https://cron-job.org (gratuit) : une tâche toutes les 15 minutes vers `http
 ### 3.5 Tests sur ton téléphone
 - [ ] **Liens Winamax** : avec les vraies cotes, touche « Winamax · mise copiée » sur un pari. Vérifie qu'il ouvre directement le bon match (sinon, dis-le à Claude : le format du lien sera corrigé), touche la sélection, colle la mise, valide.
 - [ ] Ouvrir l'appli, faire l'accueil, noter son code (Réglages → Synchronisation) et le mettre dans `PILOTE_ACCES_COMPLET`.
-- [ ] iPhone : Partager → « Sur l'écran d'accueil », puis ouvrir depuis l'icône.
+- [ ] **Installer l'appli** (voir la section 3 quater) : sur iPhone, Safari → Partager → « Sur l'écran d'accueil », puis ouvrir depuis l'icône ; sur Android, bouton « Installer » de la bannière d'accueil.
 - [ ] Réglages → Notifications → Activer, puis « Envoyer un test ».
 - [ ] Vérifier le plan du jour, valider une session en un clic.
 - [ ] Le lendemain : notification de 7h, récap à l'ouverture.
@@ -120,6 +120,25 @@ Sur https://cron-job.org (gratuit) : une tâche toutes les 15 minutes vers `http
 ### 3.6 Avant d'ouvrir au public
 - CGV, mentions légales et politique de confidentialité propres à Pilote (abonnement, données, résiliation).
 - Vérifier les règles de l'ANJ sur la promotion des jeux d'argent (messages de prévention, interdiction aux mineurs, pas d'incitation excessive). Un avis d'avocat est recommandé avant de commercialiser.
+
+---
+
+## 3 quater. L'appli mobile (iPhone et Android)
+
+Pilote **est déjà une appli mobile** : elle s'installe depuis son site, sans passer par l'App Store ni le Play Store. Une fois installée : icône sur l'écran d'accueil, plein écran, écran de démarrage, notifications (sur iPhone, seulement depuis l'appli installée, iOS 16.4 minimum), pastille sur l'icône avec le nombre de paris à valider, page « Pas de connexion » quand le réseau coupe, raccourcis par appui long sur l'icône (Android).
+
+- [ ] Sur ton iPhone, ouvre l'adresse Vercel dans **Safari** → Partager (sur iOS 26 : derrière le bouton ⋯ en bas à droite) → « Sur l'écran d'accueil » → Ajouter. Ouvre Pilote depuis l'icône : l'écran de démarrage sombre doit apparaître, puis l'appli **sans barre Safari**, le haut de l'écran sous l'heure et la batterie bien dégagé.
+- [ ] Sur un Android (si tu en as un sous la main) : Chrome → bannière d'accueil → « Installer ».
+- [ ] Dans l'appli installée : Réglages → Notifications → Activer → « Envoyer un test ».
+- [ ] Mode avion puis ouvre une page : la page « Pas de connexion » doit s'afficher, puis l'appli revient seule avec le réseau.
+- [ ] **Page à partager à tes abonnés : `ton-adresse/installer`.** Elle détecte l'appareil et donne la bonne marche à suivre. Sur ordinateur, elle affiche un QR code à scanner avec le téléphone. Si le lien est ouvert depuis Instagram, Facebook ou TikTok (qui ne permettent pas d'installer), elle demande de copier le lien dans Safari ou Chrome.
+
+**Et l'App Store / le Play Store ?** Pas recommandé pour l'instant :
+- **Apple** demande un Mac pour fabriquer l'appli, 99 €/an, classe facilement les applis de pronostics dans les jeux d'argent (règle 5.3) et impose son propre paiement pour les abonnements vendus dans l'appli (commission de 15 à 30 %).
+- **Google** interdit les applis qui « facilitent » les paris d'argent sans autorisation : le lien vers Winamax avec la mise copiée peut être vu comme tel. Inscription 25 $ une fois.
+- Si un jour tu veux tenter le Play Store après avis d'avocat : [PWABuilder](https://www.pwabuilder.com) fabrique l'appli Android à partir de l'adresse du site, sans rien coder. Il te donne un nom de paquet et une empreinte : mets-les dans `ANDROID_PACKAGE` et `ANDROID_SHA256` sur Vercel (Pilote les publie alors sur `/.well-known/assetlinks.json`, ce qui retire la barre d'adresse dans l'appli Android).
+
+Changer le logo plus tard : modifier `app/icon.svg` et `scripts/visuels.cjs`, lancer `node scripts/visuels.cjs`, puis changer `CACHE` (ex. `pilote-v3`) dans `public/sw.js` pour que les téléphones prennent les nouvelles icônes.
 
 ---
 
@@ -163,3 +182,4 @@ Le rapport est visible par tous dans `/backtest`, avec ses limites expliquées (
 - `lib/serveur/agent.ts` : l'agent du cron (7h, heures de jeu, résultats, direct).
 - `lib/serveur/analyste.ts` + `skills/` : l'analyste IA et ses fiches d'expertise.
 - `lib/serveur/abonnements.ts` : Stripe (paiement, portail, webhook).
+- `components/Installation.tsx` + `lib/installation.ts` + `public/sw.js` : l'appli mobile (installation guidée, hors connexion, pastille).

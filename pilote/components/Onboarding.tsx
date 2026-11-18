@@ -39,7 +39,7 @@ export default function Onboarding() {
   const alloc = REPARTITIONS[rep].a;
 
   return (
-    <div className="mx-auto min-h-dvh max-w-xl px-4 py-8 sm:py-14">
+    <div className="mx-auto min-h-dvh max-w-xl px-4 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))] sm:pt-14 sm:pb-14">
       <div className="flex items-center gap-3">
         <Logo className="size-11" />
         <div>

@@ -8,7 +8,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useStore } from "@/lib/store";
 import { useCalculs, useDonnees } from "@/lib/donnees";
 import { depuis, eur } from "@/lib/format";
-import { IcAccueil, IcBouclier, IcCible, IcDiamant, IcEclair, IcGraphique, IcJournal, IcRafraichir, IcReglages, IcTrophee, Logo } from "./Icones";
+import { IcAccueil, IcBouclier, IcCible, IcDiamant, IcEclair, IcGraphique, IcJournal, IcRafraichir, IcReglages, IcTelephone, IcTrophee, Logo } from "./Icones";
 import { CLE_ACTUS_VUES } from "./Actus";
 import { cx } from "./ui";
 import Onboarding from "./Onboarding";
@@ -58,7 +58,7 @@ function Source() {
 function Toasts() {
   const { toasts } = useDonnees();
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-3 z-[60] flex flex-col items-center gap-2 px-4" aria-live="polite">
+    <div className="pointer-events-none fixed inset-x-0 top-[calc(0.75rem+env(safe-area-inset-top))] z-[60] flex flex-col items-center gap-2 px-4" aria-live="polite">
       {toasts.map((t) => (
         <div
           key={t.id}
@@ -134,9 +134,9 @@ export default function Shell({ children }: { children: ReactNode }) {
   }
   if (!etat.onboarding) {
     // La page Résultats est publique : visible même sans avoir configuré l'appli.
-    if (chemin.startsWith("/resultats") || chemin.startsWith("/backtest") || chemin.startsWith("/actus")) {
+    if (["/resultats", "/backtest", "/actus", "/installer"].some((c) => chemin.startsWith(c))) {
       return (
-        <div className="mx-auto max-w-4xl px-4 pb-10">
+        <div className="mx-auto max-w-4xl px-4 pt-[env(safe-area-inset-top)] pb-10">
           <header className="flex h-14 items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
               <Logo className="size-7" />
@@ -158,7 +158,7 @@ export default function Shell({ children }: { children: ReactNode }) {
       <Toasts />
       <ModalTicket />
       {/* Navigation latérale (ordinateur) */}
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-ligne px-3 py-5 md:flex">
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-ligne px-3 py-5 pt-[calc(1.25rem+env(safe-area-inset-top))] md:flex">
         <Link href="/" className="mb-8 flex items-center gap-2.5 px-2">
           <Logo className="size-8" />
           <span className="text-[17px] font-bold tracking-tight">Pilote</span>
@@ -168,6 +168,7 @@ export default function Shell({ children }: { children: ReactNode }) {
             ...NAV,
             { href: "/actus", label: "Actualités", Icone: IcJournal, couleur: "#a78bfa" },
             { href: "/backtest", label: "Test historique", Icone: IcGraphique, couleur: "#a78bfa" },
+            { href: "/installer", label: "Appli mobile", Icone: IcTelephone, couleur: "#34d399" },
             ...(abonnement.geste === "complet" || abonnement.public ? [{ href: "/admin", label: "Administration", Icone: IcReglages, couleur: "#34d399" }] : []),
             { href: "/offres", label: "Offres", Icone: IcEclair, couleur: "#fbbf24" },
             { href: "/reglages", label: "Réglages", Icone: IcReglages, couleur: "#e9eef3" },
@@ -192,7 +193,7 @@ export default function Shell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-40 border-b border-ligne/70 bg-fond/80 backdrop-blur-xl">
+        <header className="sticky top-0 z-40 border-b border-ligne/70 bg-fond/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
           <div className="mx-auto flex h-14 max-w-4xl items-center justify-between gap-2 px-4">
             <Link href="/" className="flex items-center gap-2 md:hidden">
               <Logo className="size-7" />
