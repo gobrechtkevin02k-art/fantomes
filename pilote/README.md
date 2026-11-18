@@ -76,6 +76,14 @@ Ce qui rend la transparence vérifiable :
 - **Statistiques** mois par mois, par sport, par cote ; le meilleur et le pire côte à côte (plus grosse perte, pire mois, plus grosse baisse, plus longue série perdante) ; **simulateur** « si tu avais suivi avec 100 € » ; **carte du bilan du mois** à partager (`/api/carte-bilan`), pertes comprises.
 - **Alerte** visible si le compte n'a pas été synchronisé depuis plus de 24 h, et rappel au propriétaire après 20 h.
 
+## Actualités et module Admin
+
+- **Actualités** (`/actus`, publique, sans inscription) : résultats, annonces et bilans, gains comme pertes ; une pastille signale les nouveautés dans l'en-tête.
+- **Administration** (`/admin`, propriétaire) : tu envoies une capture Winamax (ticket, « Mes paris », historique) ; Claude la lit (vision), relève chaque pari (sélection, cote, mise, retour, résultat, numéro de ticket) et rédige un message sobre.
+- **Contrôles avant publication** : gain = mise × cote, valeurs illisibles, confiance de lecture, rapprochement avec le journal public (« ✓ dans le journal » ou « hors journal »).
+- **Publication automatique** quand la lecture est sûre (confiance ≥ 85 et chiffres cohérents) ; sinon un brouillon modifiable est proposé. Chaque publication part dans les actualités, chez les abonnés qui suivent le compte (notification) et sur le canal Telegram s'il est configuré. La capture est jointe, et peut être ajoutée en un clic comme preuve aux paris reconnus.
+- **Bilan du jour automatique** chaque soir après 22 h, calculé à partir du journal public (pas d'une capture).
+
 ## Test sur l'historique (backtest)
 
 La page `/backtest` rejoue le vrai moteur (mêmes fonctions que l'appli) sur des matchs passés :

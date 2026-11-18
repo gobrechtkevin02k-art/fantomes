@@ -123,6 +123,14 @@ export const IcTrophee = (p: P) => (
   </svg>
 );
 
+export const IcJournal = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M5 5h11v14H6a1 1 0 0 1-1-1V5Z" />
+    <path d="M16 9h3v9a1 1 0 0 1-1 1h-2" />
+    <path d="M8 9h5M8 12h5M8 15h3" />
+  </svg>
+);
+
 export function Logo({ className = "" }: { className?: string }) {
   // Identifiant unique : un dégradé défini dans un élément masqué (display:none) ne s'affiche pas ailleurs.
   const id = `lg${useId().replace(/[^a-zA-Z0-9]/g, "")}`;

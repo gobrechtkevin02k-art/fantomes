@@ -4,11 +4,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useStore } from "@/lib/store";
 import { useCalculs, useDonnees } from "@/lib/donnees";
 import { depuis, eur } from "@/lib/format";
-import { IcAccueil, IcBouclier, IcCible, IcDiamant, IcEclair, IcGraphique, IcRafraichir, IcReglages, IcTrophee, Logo } from "./Icones";
+import { IcAccueil, IcBouclier, IcCible, IcDiamant, IcEclair, IcGraphique, IcJournal, IcRafraichir, IcReglages, IcTrophee, Logo } from "./Icones";
+import { CLE_ACTUS_VUES } from "./Actus";
 import { cx } from "./ui";
 import Onboarding from "./Onboarding";
 import { ModalTicket } from "./Conseiller";
@@ -75,6 +76,31 @@ function Toasts() {
   );
 }
 
+function BoutonActus() {
+  const [nouveau, setNouveau] = useState(false);
+  const chemin = usePathname();
+  useEffect(() => {
+    fetch("/api/actus?n=1", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: { actus: { t: string }[] }) => {
+        let vu = "";
+        try {
+          vu = localStorage.getItem(CLE_ACTUS_VUES) ?? "";
+        } catch {
+          /* stockage indisponible */
+        }
+        setNouveau(!!d.actus[0] && d.actus[0].t > vu);
+      })
+      .catch(() => {});
+  }, [chemin]);
+  return (
+    <Link href="/actus" className="relative grid size-10 place-items-center rounded-full text-doux hover:bg-surface-2 hover:text-texte" aria-label={nouveau ? "Actualités (nouveau)" : "Actualités"}>
+      <IcJournal className="text-lg" />
+      {nouveau && <span className="absolute top-2 right-2 size-2 rounded-full bg-objectif" />}
+    </Link>
+  );
+}
+
 function Bankroll() {
   const { bk } = useCalculs();
   const delta = bk.total - bk.apports;
@@ -94,7 +120,7 @@ function Bankroll() {
 
 export default function Shell({ children }: { children: ReactNode }) {
   const { pret, etat } = useStore();
-  const { droits } = useDonnees();
+  const { droits, abonnement } = useDonnees();
   const verrouille = (href: string) => (href === "/objectif" && !droits.objectifCote) || (href === "/jackpot" && !droits.jackpot);
   const chemin = usePathname();
   const actif = (href: string) => (href === "/" ? chemin === "/" : chemin.startsWith(href));
@@ -108,7 +134,7 @@ export default function Shell({ children }: { children: ReactNode }) {
   }
   if (!etat.onboarding) {
     // La page Résultats est publique : visible même sans avoir configuré l'appli.
-    if (chemin.startsWith("/resultats") || chemin.startsWith("/backtest")) {
+    if (chemin.startsWith("/resultats") || chemin.startsWith("/backtest") || chemin.startsWith("/actus")) {
       return (
         <div className="mx-auto max-w-4xl px-4 pb-10">
           <header className="flex h-14 items-center justify-between">
@@ -140,7 +166,9 @@ export default function Shell({ children }: { children: ReactNode }) {
         <nav className="flex flex-col gap-1">
           {[
             ...NAV,
+            { href: "/actus", label: "Actualités", Icone: IcJournal, couleur: "#a78bfa" },
             { href: "/backtest", label: "Test historique", Icone: IcGraphique, couleur: "#a78bfa" },
+            ...(abonnement.geste === "complet" || abonnement.public ? [{ href: "/admin", label: "Administration", Icone: IcReglages, couleur: "#34d399" }] : []),
             { href: "/offres", label: "Offres", Icone: IcEclair, couleur: "#fbbf24" },
             { href: "/reglages", label: "Réglages", Icone: IcReglages, couleur: "#e9eef3" },
           ].map(({ href, label, Icone, couleur }) => (
@@ -173,6 +201,7 @@ export default function Shell({ children }: { children: ReactNode }) {
             <div className="hidden md:block" />
             <div className="flex items-center gap-1">
               <Source />
+              <BoutonActus />
               <Bankroll />
               <Link href="/reglages" className="grid size-10 place-items-center rounded-full text-doux hover:bg-surface-2 hover:text-texte md:hidden" aria-label="Réglages">
                 <IcReglages className="text-lg" />

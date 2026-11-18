@@ -9,6 +9,7 @@ import { droitsDe } from "@/lib/offres";
 import type { EtatApp, MarketKey, Pari } from "@/lib/types";
 import { aRelever, calculerCloture, enregistrerCloture } from "@/lib/serveur/clv";
 import { ancrerSiBesoin } from "@/lib/serveur/ancrage";
+import { publierBilanDuJour } from "@/lib/serveur/actus";
 import { CLE_SYNCHRO, estPublic } from "@/lib/serveur/public";
 import { cleJour } from "@/lib/engine/temps";
 
@@ -72,8 +73,9 @@ export async function GET(req: Request) {
   // Tâches qui ne dépendent pas des notifications : cote de clôture et ancrage du journal public.
   const clotures = await releverClotures([...etats.values()].flatMap((e) => e.paris), maintenant).catch(() => 0);
   const ancrage = await ancrerSiBesoin(maintenant).catch(() => null);
+  const bilanPublie = await publierBilanDuJour(maintenant, new URL(req.url).origin).catch(() => false);
 
-  if (!pushConfigure()) return NextResponse.json({ ok: true, clotures, ancrage: ancrage?.jour ?? null, info: "Notifications non configurées." });
+  if (!pushConfigure()) return NextResponse.json({ ok: true, clotures, ancrage: ancrage?.jour ?? null, bilanPublie, info: "Notifications non configurées." });
   for (const [id, etat] of etats) {
     try {
       const meta = (await st.get<MetaProfil>(`meta:${id}`)) ?? {};
@@ -102,5 +104,5 @@ export async function GET(req: Request) {
       bilan.push({ profil: id.slice(0, 8), notifications: 0, erreur: (e as Error).message });
     }
   }
-  return NextResponse.json({ ok: true, heure: new Date(maintenant).toISOString(), clotures, ancrage: ancrage?.jour ?? null, bilan });
+  return NextResponse.json({ ok: true, heure: new Date(maintenant).toISOString(), clotures, ancrage: ancrage?.jour ?? null, bilanPublie, bilan });
 }

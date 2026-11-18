@@ -135,6 +135,15 @@ export default function Reglages() {
       </Carte>
 
       {(abonnement.geste === "complet" || abonnement.public) && (
+        <Link href="/admin" className="flex items-center justify-between gap-3 rounded-2xl border border-classique/30 bg-classique/10 p-4 text-[14px]">
+          <span>
+            <span className="font-semibold text-classique">Administration</span>
+            <span className="block text-[12px] text-doux">Publier un résultat depuis une capture Winamax, écrire une annonce.</span>
+          </span>
+          <span className="text-classique">→</span>
+        </Link>
+      )}
+      {(abonnement.geste === "complet" || abonnement.public) && (
         <Link href="/backtest" className="flex items-center justify-between gap-3 rounded-2xl border border-objectif/30 bg-objectif/10 p-4 text-[14px]">
           <span>
             <span className="font-semibold text-objectif">Tester la méthode sur l&apos;historique</span>

@@ -122,6 +122,15 @@ Sur https://cron-job.org (gratuit) : une tâche toutes les 15 minutes vers `http
 
 ---
 
+## 3 ter. Publier tes résultats en une capture (Administration)
+
+- Réglages → **Administration** (ou `/admin`). Envoie une capture Winamax : l'IA lit les paris, vérifie que gain = mise × cote, cherche chaque pari dans ton journal, et prépare le message.
+- **Publication automatique** (activée par défaut) seulement si la lecture est nette et les chiffres cohérents ; sinon tu relis et tu corriges avant de publier.
+- Le message part dans **Actualités**, chez les abonnés qui te suivent, et sur Telegram si tu as créé le canal.
+- Bouton « Joindre la capture comme preuve » : tes paris reconnus reçoivent la capture comme preuve Winamax.
+- Chaque soir après 22 h, un **bilan du jour** est publié automatiquement à partir de ton journal (gains et pertes).
+- Il faut la clé `ANTHROPIC_API_KEY` pour la lecture automatique (sans elle, tu écris le message toi-même, la capture est quand même jointe).
+
 ## 3 bis. Tester la méthode sur l'historique (à faire avant de miser ou de vendre)
 
 La page **Test historique** (lien dans Réglages, ou `/backtest`) rejoue exactement ce que Pilote aurait fait sur des matchs déjà joués, avec les cotes Winamax de l'époque : juste prix, indice, mises, garde-fous, mise relevée, cote de clôture. Les scores viennent gratuitement de football-data.co.uk (Ligue 1, Ligue 2, Premier League, LaLiga, Serie A, Bundesliga, Eredivisie, Liga Portugal).
