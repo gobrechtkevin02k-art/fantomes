@@ -122,13 +122,25 @@ Sur https://cron-job.org (gratuit) : une tâche toutes les 15 minutes vers `http
 
 ---
 
+## 3 bis. Tester la méthode sur l'historique (à faire avant de miser ou de vendre)
+
+La page **Test historique** (lien dans Réglages, ou `/backtest`) rejoue exactement ce que Pilote aurait fait sur des matchs déjà joués, avec les cotes Winamax de l'époque : juste prix, indice, mises, garde-fous, mise relevée, cote de clôture. Les scores viennent gratuitement de football-data.co.uk (Ligue 1, Ligue 2, Premier League, LaLiga, Serie A, Bundesliga, Eredivisie, Liga Portugal).
+
+1. Passe ta clé The Odds API sur une **offre payante** pour un mois : l'historique n'est pas dans l'offre gratuite (10 crédits par relevé de cotes).
+2. **Premier essai à petit prix** : une seule ligue sur 2 semaines (environ 300 crédits), pour vérifier que l'historique de Winamax existe bien sur la période. S'il est trop court, le rapport affichera 0 match : avance alors la période.
+3. **Vrai test** : Ligue 1 + Premier League sur une saison complète, décision « le matin ». La page affiche le coût estimé avant de lancer (compter environ 5 000 à 6 500 crédits par championnat et par saison en 1N2). La collecte avance jour par jour et se pilote depuis le téléphone ; tu peux l'interrompre et la reprendre sans payer deux fois.
+4. Lis le **verdict** : le chiffre qui compte est la part de paris qui battent la cote de clôture. Puis change les réglages (indice minimum, avantage minimum, cotes) et clique « Relancer le test avec ces réglages » : c'est gratuit, sans recollecter.
+5. **Anti-piège** : une fois de bons réglages trouvés, vérifie-les sur une **autre saison**. S'ils ne tiennent pas, c'était du hasard.
+
+Le rapport est visible par tous dans `/backtest`, avec ses limites expliquées (un backtest est souvent plus optimiste que la réalité).
+
 ## 4. Mes propositions d'améliorations (par ordre de priorité)
 
 1. **De vrais comptes clients (e-mail + lien de connexion)** : aujourd'hui un abonnement est rattaché à un code anonyme ; pour vendre, il faut un compte (récupération, partage de code impossible).
 2. **Prouver que la méthode marche** : mesurer la *CLV* (la cote obtenue bat-elle la cote de clôture ?) et un graphique « indice annoncé vs réussite réelle ». C'est le meilleur argument de vente, et un garde-fou honnête.
 3. **Essai gratuit de 7 jours de Pro** et **tarif annuel** (2 mois offerts).
 4. **Notifications Telegram** en plus du web : plus fiables sur iPhone, sans installation.
-5. **Tester le modèle sur l'historique** (cotes passées) avant le lancement public, pour fixer les seuils avec des chiffres.
+5. ~~Tester le modèle sur l'historique~~ : fait (voir 3 bis).
 6. **Tableau de bord administrateur** : abonnés, revenus, coûts d'API et d'IA.
 7. **Lien direct vers le ticket Winamax** quand la source de cotes le fournit (déjà pris en charge s'il existe).
 

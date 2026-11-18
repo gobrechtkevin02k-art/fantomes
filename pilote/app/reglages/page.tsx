@@ -134,6 +134,16 @@ export default function Reglages() {
         )}
       </Carte>
 
+      {(abonnement.geste === "complet" || abonnement.public) && (
+        <Link href="/backtest" className="flex items-center justify-between gap-3 rounded-2xl border border-objectif/30 bg-objectif/10 p-4 text-[14px]">
+          <span>
+            <span className="font-semibold text-objectif">Tester la méthode sur l&apos;historique</span>
+            <span className="block text-[12px] text-doux">Rejoue Pilote sur des matchs passés avant de miser ou de vendre.</span>
+          </span>
+          <span className="text-objectif">→</span>
+        </Link>
+      )}
+
       <Carte accent="#34d399">
         <Titre sous="Comment ton conseiller décide et te parle. Il n'accompagne que le mode Classique.">Ton conseiller</Titre>
         <div className="divide-y divide-ligne">

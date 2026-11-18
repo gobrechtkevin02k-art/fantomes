@@ -76,6 +76,17 @@ Ce qui rend la transparence vérifiable :
 - **Statistiques** mois par mois, par sport, par cote ; le meilleur et le pire côte à côte (plus grosse perte, pire mois, plus grosse baisse, plus longue série perdante) ; **simulateur** « si tu avais suivi avec 100 € » ; **carte du bilan du mois** à partager (`/api/carte-bilan`), pertes comprises.
 - **Alerte** visible si le compte n'a pas été synchronisé depuis plus de 24 h, et rappel au propriétaire après 20 h.
 
+## Test sur l'historique (backtest)
+
+La page `/backtest` rejoue le vrai moteur (mêmes fonctions que l'appli) sur des matchs passés :
+- **collecte** pas à pas depuis le téléphone (`/api/backtest`, réservé au propriétaire) : liste des matchs du jour, relevé des cotes au moment de la décision (le matin ou N heures avant) et à la clôture via l'historique payant de The Odds API, stocké jour par jour (jamais refacturé) ;
+- **scores** gratuits de football-data.co.uk, rapprochés par date et ressemblance des noms d'équipes ; les matchs sans score sont écartés ;
+- **rapport** : verdict prudent, résultat et ROI sur une bankroll simulée, cote de clôture battue, réussite par indice, plus grosse baisse, statistiques par mois / sport / cote, et les limites d'un backtest ;
+- **réglages** de la stratégie (profil, indice et avantage minimum, cotes, mise relevée) rejouables gratuitement sur les données déjà collectées ;
+- un **mode démonstration** (120 jours simulés) pour vérifier la chaîne sans dépenser de crédits.
+
+Code : `lib/backtest/` (moteur, scores, types), `lib/serveur/backtest.ts` (collecte, exécution, stockage du rapport).
+
 ## Skills de l'analyste IA
 
 Les fiches `skills/<nom>/SKILL.md` (méthode générale, football, basket, tennis) sont ajoutées aux instructions de l'analyste selon le sport du match. Pour enrichir l'expertise, il suffit d'éditer ou d'ajouter une fiche.

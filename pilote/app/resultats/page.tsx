@@ -564,6 +564,14 @@ export default function Resultats() {
             </p>
           </Carte>
 
+          <Link href="/backtest" className="flex items-center justify-between gap-3 rounded-2xl border border-ligne bg-surface p-4 text-[13px]">
+            <span>
+              <span className="font-semibold text-texte">Test de la méthode sur l&apos;historique</span>
+              <span className="block text-[12px] text-doux">Les mêmes règles rejouées sur des matchs passés, avec leurs limites expliquées.</span>
+            </span>
+            <span className="text-doux">→</span>
+          </Link>
+
           <p className="text-[11px] leading-relaxed text-faible">
             Les résultats passés ne préjugent pas des résultats futurs. Les paris sportifs comportent un risque de perte. Interdit aux moins de 18 ans. Pour être aidé, appelez le 09 74 75 13 13
             (appel non surtaxé).

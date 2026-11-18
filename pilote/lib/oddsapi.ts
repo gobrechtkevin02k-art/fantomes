@@ -131,3 +131,30 @@ export async function sportsLive(): Promise<SportInfo[]> {
   const data = await appeler<ApiSport[]>("/sports", {}, TTL_SPORTS);
   return data.map((s) => ({ key: s.key, group: s.group, title: s.title, active: s.active, outrights: s.has_outrights }));
 }
+
+// ---------------------------------------------------------------------------
+// Historique (offres payantes de The Odds API) : instantanés de cotes passés, pour le backtest.
+// Coût : 1 crédit pour la liste des matchs, 10 crédits par marché pour un instantané de cotes.
+
+const TTL_HISTORIQUE = 24 * 3_600_000; // un instantané passé ne change plus
+
+interface Enveloppe<T> {
+  timestamp?: string;
+  data?: T;
+}
+
+export async function historiqueMatchs(sport: string, dateIso: string): Promise<{ id: string; commence: string; home: string; away: string }[]> {
+  const r = await appeler<Enveloppe<ApiEvent[]> | ApiEvent[]>(`/historical/sports/${sport}/events`, { date: dateIso, dateFormat: "iso" }, TTL_HISTORIQUE);
+  const data = Array.isArray(r) ? r : (r.data ?? []);
+  return data.map((e) => ({ id: e.id, commence: e.commence_time, home: e.home_team, away: e.away_team }));
+}
+
+export async function historiqueCotes(sport: string, dateIso: string, marches: MarketKey[]): Promise<{ t: string; events: SportEvent[] }> {
+  const r = await appeler<Enveloppe<ApiEvent[]> | ApiEvent[]>(
+    `/historical/sports/${sport}/odds`,
+    { date: dateIso, bookmakers: BOOKMAKERS_API.join(","), markets: marches.join(","), oddsFormat: "decimal", dateFormat: "iso" },
+    TTL_HISTORIQUE,
+  );
+  const data = Array.isArray(r) ? r : (r.data ?? []);
+  return { t: (!Array.isArray(r) && r.timestamp) || dateIso, events: data.map(normaliser) };
+}

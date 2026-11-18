@@ -108,7 +108,7 @@ export default function Shell({ children }: { children: ReactNode }) {
   }
   if (!etat.onboarding) {
     // La page Résultats est publique : visible même sans avoir configuré l'appli.
-    if (chemin.startsWith("/resultats")) {
+    if (chemin.startsWith("/resultats") || chemin.startsWith("/backtest")) {
       return (
         <div className="mx-auto max-w-4xl px-4 pb-10">
           <header className="flex h-14 items-center justify-between">
@@ -138,7 +138,12 @@ export default function Shell({ children }: { children: ReactNode }) {
           <span className="text-[17px] font-bold tracking-tight">Pilote</span>
         </Link>
         <nav className="flex flex-col gap-1">
-          {[...NAV, { href: "/offres", label: "Offres", Icone: IcEclair, couleur: "#fbbf24" }, { href: "/reglages", label: "Réglages", Icone: IcReglages, couleur: "#e9eef3" }].map(({ href, label, Icone, couleur }) => (
+          {[
+            ...NAV,
+            { href: "/backtest", label: "Test historique", Icone: IcGraphique, couleur: "#a78bfa" },
+            { href: "/offres", label: "Offres", Icone: IcEclair, couleur: "#fbbf24" },
+            { href: "/reglages", label: "Réglages", Icone: IcReglages, couleur: "#e9eef3" },
+          ].map(({ href, label, Icone, couleur }) => (
             <Link
               key={href}
               href={href}

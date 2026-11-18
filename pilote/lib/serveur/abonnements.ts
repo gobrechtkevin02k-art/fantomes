@@ -20,6 +20,15 @@ interface AbonnementStocke {
 
 const cle = (profilId: string) => `abonnement:${profilId}`;
 
+/** Profils qui ont tout débloqué (propriétaire, testeurs) : ils peuvent aussi lancer les tâches d'administration. */
+export function accesComplet(profilId: string): boolean {
+  return (process.env.PILOTE_ACCES_COMPLET ?? "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .includes(profilId);
+}
+
 /** Offre réellement accordée à un profil. */
 export async function offreDe(profilId: string): Promise<EtatAbonnement> {
   // Accès complet pour le propriétaire et les testeurs (liste de codes séparés par des virgules).

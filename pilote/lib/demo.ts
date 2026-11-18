@@ -305,3 +305,45 @@ export function scoresDemo(sports: string[], maintenant = Date.now(), joursAvant
       };
     });
 }
+
+// ---------------------------------------------------------------------------
+// Historique de démonstration pour le backtest : matchs passés, cotes au moment de la décision
+// (3 h avant), cotes de clôture (plus proches de la vérité, comme sur un vrai marché) et score final.
+
+const BOOKS_CLOTURE = BOOKS.map((b) => (b.key === "winamax_fr" ? { ...b, bruit: 0.02 } : { ...b, bruit: b.bruit * 0.6 }));
+
+export function historiqueDemo(sports: string[], maintenant = Date.now(), jours = 90) {
+  const j0 = Math.floor(maintenant / JOUR);
+  const out = [];
+  for (const l of LIGUES) {
+    if (sports.length && !sports.includes(l.key)) continue;
+    for (let j = j0 - jours; j < j0; j++) {
+      for (const m of matchsDuJour(l, j)) {
+        const debut = Date.parse(m.event.commence);
+        if (debut + 3 * 3_600_000 > maintenant) continue;
+        const rc = prng(m.graine ^ 0x5bd1e995);
+        const cloture: Bookmaker[] = BOOKS_CLOTURE.map((b) => ({
+          key: b.key,
+          title: b.title,
+          markets: m.modele.marches.map((mk) => ({
+            key: mk.key,
+            outcomes: coter(mk.issues, b, rc, false).map((o) => ({ ...o, ...(mk.point !== undefined ? { point: mk.point } : {}) })),
+          })),
+        }));
+        const [h, a] = m.modele.tirerScore(prng(m.graine ^ 0x9e3779b9));
+        out.push({
+          id: m.event.id,
+          sportKey: m.event.sportKey,
+          sportTitle: m.event.sportTitle,
+          commence: m.event.commence,
+          home: m.event.home,
+          away: m.event.away,
+          decision: { t: new Date(debut - 3 * 3_600_000).toISOString(), bookmakers: m.event.bookmakers },
+          cloture: { t: new Date(debut - 5 * 60_000).toISOString(), bookmakers: cloture },
+          resultat: { home: h, away: a },
+        });
+      }
+    }
+  }
+  return out;
+}
