@@ -122,13 +122,13 @@ function TableStats({ lignes, attendue }: { lignes: LigneStats[]; attendue?: boo
           {lignes.map((l) => (
             <tr key={l.cle}>
               <td className="py-2 pr-1 font-medium">{l.libelle}</td>
-              <td className="px-1 py-2 text-right">{l.paris}</td>
-              <td className="px-1 py-2 text-right">{pct(l.reussite, 0)}</td>
-              {attendue && <td className="px-1 py-2 text-right text-doux">{pct(l.reussiteAttendue, 0)}</td>}
-              <td className="px-1 py-2 text-right font-semibold" style={{ color: couleur(l.resultat) }}>
+              <td className="whitespace-nowrap px-1 py-2 text-right">{l.paris}</td>
+              <td className="whitespace-nowrap px-1 py-2 text-right">{pct(l.reussite, 0)}</td>
+              {attendue && <td className="whitespace-nowrap px-1 py-2 text-right text-doux">{pct(l.reussiteAttendue, 0)}</td>}
+              <td className="whitespace-nowrap px-1 py-2 text-right font-semibold" style={{ color: couleur(l.resultat) }}>
                 {eurSigne(l.resultat)}
               </td>
-              <td className="px-1 py-2 text-right" style={{ color: couleur(l.roi) }}>
+              <td className="whitespace-nowrap px-1 py-2 text-right" style={{ color: couleur(l.roi) }}>
                 {pctSigne(l.roi)}
               </td>
             </tr>
