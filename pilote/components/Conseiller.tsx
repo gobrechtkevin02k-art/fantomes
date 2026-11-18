@@ -373,7 +373,9 @@ export function ModalTicket() {
           Terminé
         </Bouton>
       </div>
-      <p className="mt-3 text-[11px] text-faible">Si la cote a changé sur Winamax, corrige-la dans Suivi : je recalculerai tout.</p>
+      <p className="mt-3 text-[11px] text-faible">
+        Si la cote a changé sur Winamax, corrige-la dans Suivi : je recalculerai tout. Pense aussi à y ajouter la preuve (numéro ou photo du ticket) : elle renforce tes résultats.
+      </p>
     </Modal>
   );
 }

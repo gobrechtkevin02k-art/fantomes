@@ -3,7 +3,7 @@
 // État de l'application (bankroll, paris, réglages), conservé dans le navigateur (localStorage).
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { EtatApp, Mouvement, Pari, Reglages } from "./types";
+import type { EtatApp, Mouvement, Pari, Reglages, ReleveSolde } from "./types";
 import { uid } from "./format";
 import { SPORTS_PAR_DEFAUT } from "./sports";
 
@@ -74,6 +74,7 @@ function fusionner(brut: unknown): EtatApp {
       conseiller: { ...base.reglages.conseiller, ...(r.conseiller ?? {}) },
     },
     paris: Array.isArray(e.paris) ? e.paris : [],
+    releves: Array.isArray(e.releves) ? e.releves : [],
     mouvements: Array.isArray(e.mouvements) ? e.mouvements : [],
     onboarding: !!e.onboarding,
   };
@@ -88,6 +89,7 @@ interface ContexteStore {
   terminerOnboarding: (r: Partial<Reglages>) => void;
   ajouterPari: (p: Pari) => void;
   ajouterParis: (ps: Pari[]) => void;
+  ajouterReleve: (r: ReleveSolde) => void;
   marquerVisite: () => void;
   majParis: (ps: Pari[]) => void;
   supprimerPari: (id: string) => void;
@@ -159,11 +161,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const supprimerMouvement = useCallback((id: string) => setEtat((e) => horodater({ ...e, mouvements: e.mouvements.filter((m) => m.id !== id) })), []);
   const remplacer = useCallback((brut: unknown) => setEtat(fusionner(brut)), []);
   const reinitialiser = useCallback(() => setEtat(etatInitial()), []);
+  const ajouterReleve = useCallback((r: ReleveSolde) => setEtat((e) => horodater({ ...e, releves: [...(e.releves ?? []), r] })), []);
   const marquerVisite = useCallback(() => setEtat((e) => ({ ...e, derniereVisite: new Date().toISOString() })), []);
 
   const valeur = useMemo(
-    () => ({ pret, etat, majReglages, terminerOnboarding, ajouterPari, ajouterParis, marquerVisite, majParis, supprimerPari, ajouterMouvement, supprimerMouvement, remplacer, reinitialiser }),
-    [pret, etat, majReglages, terminerOnboarding, ajouterPari, ajouterParis, marquerVisite, majParis, supprimerPari, ajouterMouvement, supprimerMouvement, remplacer, reinitialiser],
+    () => ({ pret, etat, majReglages, terminerOnboarding, ajouterPari, ajouterParis, ajouterReleve, marquerVisite, majParis, supprimerPari, ajouterMouvement, supprimerMouvement, remplacer, reinitialiser }),
+    [pret, etat, majReglages, terminerOnboarding, ajouterPari, ajouterParis, ajouterReleve, marquerVisite, majParis, supprimerPari, ajouterMouvement, supprimerMouvement, remplacer, reinitialiser],
   );
   return <Ctx.Provider value={valeur}>{children}</Ctx.Provider>;
 }

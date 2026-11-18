@@ -67,6 +67,15 @@ L'onglet **Résultats** montre à tous (abonnés et visiteurs, sans inscription)
 
 Le journal ne fait qu'ajouter des entrées, et chacune contient l'empreinte SHA-256 de la précédente. Le navigateur du visiteur recalcule toute la chaîne et affiche « intacte » ou l'entrée altérée. Les paris faits en mode démo n'y figurent jamais.
 
+Ce qui rend la transparence vérifiable :
+- **Ancrage externe** : chaque jour, le cron publie l'empreinte du journal hors de Pilote (horodatage OpenTimestamps inscrit dans la blockchain Bitcoin, et canal Telegram si `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CANAL` sont définis). Les fichiers `.txt` et `.ots` se téléchargent depuis la page et se vérifient sur opentimestamps.org.
+- **Preuves Winamax** : numéro et/ou photo du ticket pour chaque pari (Suivi → « Ajouter la preuve »), avec l'empreinte de la photo inscrite dans le journal.
+- **Relevé de solde mensuel** : solde Winamax (capture) comparé au solde calculé par Pilote, écart affiché.
+- **Paris scellés** : pour les visiteurs sans offre payante, un pari n'est révélé qu'au coup d'envoi ; avant, seule son empreinte est publiée, et le contenu révélé doit lui correspondre. Les abonnés voient tout en direct et peuvent **suivre le compte** (notification à chaque pari et à chaque résultat).
+- **Qualité des paris** : cote obtenue contre cote de clôture (relevée par le cron dans les 20 minutes avant chaque match), part de chance (attendu contre réel), indice annoncé contre réussite réelle.
+- **Statistiques** mois par mois, par sport, par cote ; le meilleur et le pire côte à côte (plus grosse perte, pire mois, plus grosse baisse, plus longue série perdante) ; **simulateur** « si tu avais suivi avec 100 € » ; **carte du bilan du mois** à partager (`/api/carte-bilan`), pertes comprises.
+- **Alerte** visible si le compte n'a pas été synchronisé depuis plus de 24 h, et rappel au propriétaire après 20 h.
+
 ## Skills de l'analyste IA
 
 Les fiches `skills/<nom>/SKILL.md` (méthode générale, football, basket, tennis) sont ajoutées aux instructions de l'analyste selon le sport du match. Pour enrichir l'expertise, il suffit d'éditer ou d'ajouter une fiche.

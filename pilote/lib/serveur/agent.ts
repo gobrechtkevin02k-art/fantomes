@@ -37,6 +37,7 @@ export interface MetaProfil {
   plan?: PlanResume;
   reglesNotifies?: string[]; // paris dont le résultat a déjà été notifié
   alertesDirect?: Record<string, Conseil>; // dernier conseil de cash-out notifié par pari
+  rappelSynchro?: string; // jour du dernier rappel de synchronisation (compte public)
 }
 
 export interface NotificationAgent {

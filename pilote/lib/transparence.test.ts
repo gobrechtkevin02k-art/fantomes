@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { etatInitial } from "./store";
 import type { EtatApp, Pari } from "./types";
-import { chainer, differences, verifierChaine } from "./transparence";
+import { chainer, differences, sceller, verifierChaine } from "./transparence";
 
 const T = Date.parse("2026-11-17T12:00:00Z");
 
@@ -61,5 +61,27 @@ describe("journal de transparence", () => {
     triche[0].d.bankrollInitiale = 5000;
     expect(await verifierChaine(triche)).toBe(1);
     expect(await verifierChaine([j2[1]])).toBe(2); // entrée supprimée en tête de chaîne
+  });
+
+  it("scelle un pari jusqu'au coup d'envoi, puis le révèle tel quel", async () => {
+    const j = await chainer(await chainer([], differences(null, etat(), T), T), differences(etat(), etat([pari()]), T), T);
+    const avant = sceller(j, Date.parse("2026-11-17T14:00:00Z"));
+    expect(avant[1].d).toBeUndefined();
+    expect(avant[1].apercu).toEqual({ mode: "classique", mise: 10, commence: "2026-11-17T15:00:00.000Z" });
+    expect(await verifierChaine(avant)).toBeNull(); // vérifiable même scellé
+    const apres = sceller(j, Date.parse("2026-11-17T15:01:00Z"));
+    expect(apres[1].d?.pari?.selections[0].label).toBe("Victoire A");
+    // Un contenu révélé différent de celui scellé est détecté.
+    const faux = apres.map((e) => (e.n === 2 ? { ...e, d: { ...e.d, pari: { ...e.d!.pari!, cote: 3.5 } } } : e));
+    expect(await verifierChaine(faux)).toBe(2);
+  });
+
+  it("inscrit les preuves Winamax et les relevés de solde", () => {
+    const a = etat([pari()]);
+    const b = { ...etat([pari({ preuve: { numero: "WX-123", empreinte: "abc", ajouteeLe: "2026-11-17T12:00:00Z" } })]), releves: [{ id: "r1", date: "2026-11-30T20:00:00Z", soldeWinamax: 512, soldePilote: 510 }] };
+    const ev = differences(a, b, T);
+    expect(ev.map((e) => e.type)).toEqual(["preuve_ajoutee", "releve_solde"]);
+    expect(ev[0].d.pari?.preuve?.numero).toBe("WX-123");
+    expect(ev[1].d.releve?.ecart).toBe(2);
   });
 });

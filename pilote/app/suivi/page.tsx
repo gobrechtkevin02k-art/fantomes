@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { Mode, Pari, StatutPari, TypeMouvement } from "@/lib/types";
+import { useEffect, useMemo, useState } from "react";
+import type { Cloture, Mode, Pari, StatutPari, TypeMouvement } from "@/lib/types";
+import { FormReleve, ModalPreuve } from "@/components/Preuves";
+import { MeilleurPire, QualiteParis, StatsDetaillees } from "@/components/Analyses";
 import { useStore } from "@/lib/store";
 import { useCalculs, useDonnees } from "@/lib/donnees";
 import { MODES, statistiques, type Stats } from "@/lib/engine/bankroll";
@@ -19,7 +21,7 @@ const STATUT: Record<StatutPari, { l: string; c: string }> = {
   cashout: { l: "Cash-out", c: "#fbbf24" },
 };
 
-function LignePari({ p, onRegler }: { p: Pari; onRegler: (p: Pari) => void }) {
+function LignePari({ p, onRegler, onPreuve }: { p: Pari; onRegler: (p: Pari) => void; onPreuve: (p: Pari) => void }) {
   const { supprimerPari, majParis } = useStore();
   const publicCompte = !!useDonnees().abonnement.public;
   const st = STATUT[p.statut];
@@ -32,6 +34,11 @@ function LignePari({ p, onRegler }: { p: Pari; onRegler: (p: Pari) => void }) {
           <Badge couleur={st.c}>{st.l}</Badge>
           {p.demo && <Badge couleur="#fbbf24">Démo</Badge>}
           {p.auto && <span className="text-[11px] text-faible">réglé automatiquement</span>}
+          {p.preuve && (
+            <Badge couleur="#34d399">
+              🧾 {p.preuve.numero ? `n°${p.preuve.numero}` : "ticket"}
+            </Badge>
+          )}
         </div>
         <span className="num shrink-0 text-[12px] text-faible">{dateCourte(p.creeLe)}</span>
       </div>
@@ -69,6 +76,16 @@ function LignePari({ p, onRegler }: { p: Pari; onRegler: (p: Pari) => void }) {
         )}
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
+        {!p.demo && (
+          <Bouton variante="fantome" className="min-h-9 text-[13px]" onClick={() => onPreuve(p)}>
+            🧾 {p.preuve ? "Preuve" : "Ajouter la preuve"}
+          </Bouton>
+        )}
+        {p.preuve?.photo && (
+          <a href={p.preuve.photo} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center text-[13px] font-semibold text-objectif underline">
+            Voir le ticket
+          </a>
+        )}
         {p.statut === "en_cours" ? (
           <Bouton variante="contour" className="min-h-9 text-[13px]" onClick={() => onRegler(p)}>
             Régler à la main
@@ -226,6 +243,10 @@ function Mouvements() {
         </div>
       </Carte>
       <Carte>
+        <Titre sous="La preuve que Pilote et ton compte Winamax disent la même chose.">Relevé de solde Winamax</Titre>
+        <FormReleve />
+      </Carte>
+      <Carte>
         <Titre sous="Remet chaque poche à sa part cible de la bankroll totale.">Poches</Titre>
         <div className="grid grid-cols-3 gap-3">
           {MODES.map((mo) => (
@@ -286,6 +307,18 @@ export default function Suivi() {
   const { verifierResultats, notifier, maintenant } = useDonnees();
   const [onglet, setOnglet] = useState<Onglet>("en_cours");
   const [aRegler, setARegler] = useState<Pari | null>(null);
+  const [pourPreuve, setPourPreuve] = useState<Pari | null>(null);
+  const [clotures, setClotures] = useState<Record<string, Cloture>>({});
+  const idsSelections = etat.paris.filter((p) => !p.demo).flatMap((p) => p.jambes.map((j) => j.selectionId));
+  const signatureIds = idsSelections.join(",");
+  // Cotes de clôture relevées par l'agent juste avant chaque match (pour la qualité des paris).
+  useEffect(() => {
+    if (onglet !== "stats" || !signatureIds) return;
+    fetch("/api/clotures", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: signatureIds.split(",") }) })
+      .then((r) => r.json())
+      .then((d: { clotures?: Record<string, Cloture> }) => setClotures(d.clotures ?? {}))
+      .catch(() => {});
+  }, [onglet, signatureIds]);
   const [filtre, setFiltre] = useState<Mode | "tous">("tous");
 
   const enCours = etat.paris.filter((p) => p.statut === "en_cours" && (filtre === "tous" || p.mode === filtre));
@@ -351,7 +384,7 @@ export default function Suivi() {
         ) : (
           <div className="grid gap-3 lg:grid-cols-2">
             {enCours.map((p) => (
-              <LignePari key={p.id} p={p} onRegler={setARegler} />
+              <LignePari key={p.id} p={p} onRegler={setARegler} onPreuve={setPourPreuve} />
             ))}
           </div>
         ))}
@@ -362,7 +395,7 @@ export default function Suivi() {
         ) : (
           <div className="grid gap-3 lg:grid-cols-2">
             {regles.map((p) => (
-              <LignePari key={p.id} p={p} onRegler={setARegler} />
+              <LignePari key={p.id} p={p} onRegler={setARegler} onPreuve={setPourPreuve} />
             ))}
           </div>
         ))}
@@ -374,6 +407,9 @@ export default function Suivi() {
             <Graphique points={[...bk.historique, { date: new Date(maintenant).toISOString(), total: bk.total }]} depart={bk.apports} objectif={etat.reglages.objectif?.montant} hauteur={180} />
           </Carte>
           <BlocStats s={global} titre="Tous les paris" couleur="#e9eef3" />
+          <MeilleurPire paris={etat.paris.filter((p) => !p.demo)} tz={etat.reglages.conseiller.fuseau} depart={bk.apports} />
+          <QualiteParis paris={etat.paris.filter((p) => !p.demo)} clotures={clotures} />
+          <StatsDetaillees paris={etat.paris.filter((p) => !p.demo)} tz={etat.reglages.conseiller.fuseau} />
           {MODES.map((m) => (
             <BlocStats key={m} s={statistiques(etat.paris, m)} titre={NOM_MODE[m]} couleur={COULEUR_MODE[m]} />
           ))}
@@ -389,6 +425,7 @@ export default function Suivi() {
       {onglet === "mouvements" && <Mouvements />}
 
       <ModalReglement p={aRegler} onFermer={() => setARegler(null)} />
+      <ModalPreuve pari={pourPreuve ? (etat.paris.find((p) => p.id === pourPreuve.id) ?? pourPreuve) : null} onFermer={() => setPourPreuve(null)} />
     </div>
   );
 }

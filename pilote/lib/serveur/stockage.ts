@@ -15,6 +15,7 @@ interface Stockage {
   set(cle: string, valeur: unknown, ttlSecondes?: number): Promise<void>;
   del(cle: string): Promise<void>;
   ajouterAEnsemble(cle: string, membre: string): Promise<void>;
+  retirerDeEnsemble(cle: string, membre: string): Promise<void>;
   membres(cle: string): Promise<string[]>;
 }
 
@@ -46,6 +47,9 @@ function redis(url: string, jeton: string): Stockage {
     },
     async ajouterAEnsemble(cle, membre) {
       await cmd("SADD", cle, membre);
+    },
+    async retirerDeEnsemble(cle, membre) {
+      await cmd("SREM", cle, membre);
     },
     async membres(cle) {
       return (await cmd<string[] | null>("SMEMBERS", cle)) ?? [];
@@ -114,6 +118,11 @@ function local(type: "fichier" | "memoire"): Stockage {
       const d = await charger();
       const actuel = ((d[cle]?.v as string[]) ?? []).filter((m) => m !== membre);
       d[cle] = { v: [...actuel, membre] };
+      await sauver();
+    },
+    async retirerDeEnsemble(cle, membre) {
+      const d = await charger();
+      d[cle] = { v: ((d[cle]?.v as string[]) ?? []).filter((m) => m !== membre) };
       await sauver();
     },
     async membres(cle) {

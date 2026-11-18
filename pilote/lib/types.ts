@@ -146,7 +146,32 @@ export interface Pari {
   miseConseillee?: number; // mise de la gestion de bankroll, avant décision du conseiller
   boost?: number; // multiplicateur décidé par le conseiller (1 = conseil de gestion)
   demo?: boolean; // pari enregistré pendant le mode démo
+  preuve?: PreuveWinamax; // ticket Winamax (numéro et/ou photo)
   note?: string;
+}
+
+export interface PreuveWinamax {
+  numero?: string; // référence du ticket Winamax
+  photo?: string; // adresse de la photo (/api/preuve/…)
+  empreinte?: string; // SHA-256 de la photo, inscrit dans le journal
+  ajouteeLe: string;
+}
+
+/** Relevé de solde : le solde affiché par Winamax comparé à celui calculé par Pilote. */
+export interface ReleveSolde {
+  id: string;
+  date: string;
+  soldeWinamax: number;
+  soldePilote: number; // disponible calculé par Pilote au même moment
+  photo?: string;
+  empreinte?: string;
+}
+
+/** Cote de clôture d'une sélection, relevée juste avant le coup d'envoi. */
+export interface Cloture {
+  cote: number | null; // cote Winamax à la clôture
+  probaJuste: number; // probabilité juste (consensus, marge retirée) à la clôture
+  releveLe: string;
 }
 
 export type TypeMouvement = "depot" | "retrait" | "ajustement" | "reequilibrage";
@@ -200,6 +225,7 @@ export interface EtatApp {
   mouvements: Mouvement[];
   onboarding: boolean;
   derniereVisite: string | null; // pour le récapitulatif « pendant ton absence »
+  releves?: ReleveSolde[];
   majLe: string;
 }
 

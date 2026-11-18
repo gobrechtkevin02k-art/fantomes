@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { cleProfil, stockage } from "@/lib/serveur/stockage";
 import { fusionnerPlans, type MetaProfil, type PlanResume } from "@/lib/serveur/agent";
-import { estPublic, journaliser } from "@/lib/serveur/public";
+import { diffuser, estPublic, journaliser } from "@/lib/serveur/public";
 import type { EtatApp } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,12 @@ export async function POST(req: Request) {
   try {
     if (c.etat && typeof c.etat === "object" && c.etat.profilId === id && Array.isArray(c.etat.paris) && Array.isArray(c.etat.mouvements)) {
       // Compte public : chaque modification est inscrite dans le journal avant d'être enregistrée.
-      if (estPublic(id)) await journaliser(c.etat, await st.get<EtatApp>(`etat:${id}`));
+      if (estPublic(id)) {
+        const nouveaux = await journaliser(c.etat, await st.get<EtatApp>(`etat:${id}`));
+        const etat = c.etat;
+        // Les abonnés qui suivent le compte sont prévenus après la réponse, sans faire attendre l'appli.
+        if (nouveaux.length) after(() => diffuser(nouveaux, etat).catch(() => 0));
+      }
       await st.set(`etat:${id}`, c.etat);
       await st.ajouterAEnsemble("profils", id);
     }
