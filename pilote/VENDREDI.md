@@ -109,6 +109,7 @@ Sur https://cron-job.org (gratuit) : une tâche toutes les 15 minutes vers `http
 5. Tester avec la carte `4242 4242 4242 4242`, date future, n'importe quel code.
 
 ### 3.5 Tests sur ton téléphone
+- [ ] **Liens Winamax** : avec les vraies cotes, touche « Winamax · mise copiée » sur un pari. Vérifie qu'il ouvre directement le bon match (sinon, dis-le à Claude : le format du lien sera corrigé), touche la sélection, colle la mise, valide.
 - [ ] Ouvrir l'appli, faire l'accueil, noter son code (Réglages → Synchronisation) et le mettre dans `PILOTE_ACCES_COMPLET`.
 - [ ] iPhone : Partager → « Sur l'écran d'accueil », puis ouvrir depuis l'icône.
 - [ ] Réglages → Notifications → Activer, puis « Envoyer un test ».

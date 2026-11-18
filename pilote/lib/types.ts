@@ -7,6 +7,7 @@ export interface BookOutcome {
   price: number;
   point?: number;
   link?: string;
+  sid?: string; // identifiant de l'issue chez le bookmaker
 }
 
 export interface BookMarket {
@@ -20,6 +21,7 @@ export interface Bookmaker {
   title: string;
   markets: BookMarket[];
   link?: string;
+  sid?: string; // identifiant du match chez le bookmaker
 }
 
 export interface SportEvent {
@@ -127,6 +129,7 @@ export interface Jambe {
   odds: number;
   fairProb: number;
   statut: StatutJambe;
+  lien?: string; // lien Winamax direct (match ou ticket) quand il est connu
 }
 
 export interface Pari {

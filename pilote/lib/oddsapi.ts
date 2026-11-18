@@ -52,6 +52,7 @@ interface ApiOutcome {
   price: number;
   point?: number;
   link?: string;
+  sid?: string;
 }
 interface ApiEvent {
   id: string;
@@ -60,7 +61,7 @@ interface ApiEvent {
   commence_time: string;
   home_team: string;
   away_team: string;
-  bookmakers?: { key: string; title: string; link?: string; markets: { key: string; link?: string; outcomes: ApiOutcome[] }[] }[];
+  bookmakers?: { key: string; title: string; link?: string; sid?: string; markets: { key: string; link?: string; sid?: string; outcomes: ApiOutcome[] }[] }[];
 }
 
 const MARCHES_CONNUS = new Set<MarketKey>(["h2h", "totals", "spreads"]);
@@ -70,12 +71,13 @@ function normaliser(e: ApiEvent): SportEvent {
     key: b.key,
     title: b.title,
     link: b.link,
+    ...(b.sid ? { sid: String(b.sid) } : {}),
     markets: b.markets
       .filter((m) => MARCHES_CONNUS.has(m.key as MarketKey))
       .map((m) => ({
         key: m.key as MarketKey,
         link: m.link,
-        outcomes: m.outcomes.map((o) => ({ name: o.name, price: Number(o.price), point: o.point, link: o.link })),
+        outcomes: m.outcomes.map((o) => ({ name: o.name, price: Number(o.price), point: o.point, link: o.link, ...(o.sid ? { sid: String(o.sid) } : {}) })),
       })),
   }));
   return { id: e.id, sportKey: e.sport_key, sportTitle: e.sport_title, commence: e.commence_time, home: e.home_team, away: e.away_team, bookmakers };
@@ -90,6 +92,7 @@ export async function cotesLive(sport: string, marches: MarketKey[], ttl = TTL_C
       oddsFormat: "decimal",
       dateFormat: "iso",
       includeLinks: "true",
+      includeSids: "true",
     },
     ttl,
   );

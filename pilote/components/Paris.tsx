@@ -13,7 +13,7 @@ import { emojiSport, nomSport } from "@/lib/sports";
 import { Badge, Barre, Bouton, COULEUR_MODE, Carte, Champ, Jauge, LienBouton, Modal, cx, libelleConfiance } from "./ui";
 import { IcAlerte, IcChevron, IcCopier, IcExterne, IcValider } from "./Icones";
 import { PanneauAnalyse } from "./Conseiller";
-import { lienWinamax, WINAMAX } from "@/lib/winamax";
+import { lienWinamax, ouvrirAvecMise, WINAMAX } from "@/lib/winamax";
 
 export { lienWinamax };
 
@@ -32,6 +32,7 @@ function versJambe(s: Selection): Jambe {
     label: s.label,
     odds: s.odds,
     fairProb: s.fairProb,
+    ...(s.link ? { lien: s.link } : {}),
     statut: "en_cours",
   };
 }
@@ -124,9 +125,16 @@ export function ModalPari({ projet, onFermer }: { projet: ProjetPari | null; onF
         </ol>
 
         <div className="flex gap-2">
-          <LienBouton href={lien} className="flex-1" couleur={couleur}>
-            Ouvrir Winamax <IcExterne />
-          </LienBouton>
+          <Bouton
+            variante="contour"
+            className="flex-1"
+            onClick={() => {
+              ouvrirAvecMise(lien, Number(mise.replace(",", ".")) || projet.mise);
+              notifier("Mise copiée : colle-la sur Winamax.", "info");
+            }}
+          >
+            Ouvrir Winamax · mise copiée <IcExterne />
+          </Bouton>
           <Bouton
             variante="contour"
             onClick={() => {
@@ -299,9 +307,9 @@ export function CarteSelection({
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <LienBouton href={lienWinamax(s.link)} couleur={couleur}>
+        <Bouton variante="contour" onClick={() => ouvrirAvecMise(lienWinamax(s.link), mise.mise > 0 ? mise.mise : 1)}>
           Winamax <IcExterne />
-        </LienBouton>
+        </Bouton>
         <Bouton
           couleur={couleur}
           variante={mise.mise > 0 ? "plein" : "contour"}

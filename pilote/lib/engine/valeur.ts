@@ -3,6 +3,7 @@
 
 import type { Bookmaker, BookMarket, FacteursConfiance, MarketKey, Selection, SportEvent } from "../types";
 import { clamp, devigPuissance, logit, moyennePonderee, phi } from "./proba";
+import { lienMatchWinamax } from "../winamax";
 
 export const BOOKMAKER_CIBLE = "winamax_fr";
 
@@ -203,7 +204,7 @@ export function construireSelections(events: SportEvent[], opts: OptionsSelectio
             books: refs.length,
             sharp,
             suspect,
-            link: iw.link ?? lw.link ?? wina.link,
+            link: iw.link ?? lw.link ?? wina.link ?? lienMatchWinamax(wina.sid),
           });
         });
       }

@@ -11,7 +11,7 @@ import { parties } from "@/lib/engine/temps";
 import { useStore } from "@/lib/store";
 import { useDonnees, usePlan } from "@/lib/donnees";
 import { useAutonomie } from "@/lib/autonomie";
-import { lienWinamax, WINAMAX } from "@/lib/winamax";
+import { lienWinamax, ouvrirAvecMise, WINAMAX } from "@/lib/winamax";
 import { cote, dansCombien, dateMatch, eur, eurSigne, pct } from "@/lib/format";
 import { emojiSport } from "@/lib/sports";
 import { Badge, Bouton, COULEUR_MODE, Carte, Jauge, LienBouton, Modal, cx } from "./ui";
@@ -183,7 +183,8 @@ export function BlocSession({ session, maintenant, enAvant }: { session: Session
   }, [enAvant]);
 
   const valider = () => {
-    window.open(lienItems(session.items), "_blank", "noopener");
+    // Un seul pari : Winamax s'ouvre directement sur le match, mise copiée. Plusieurs : le ticket guide pari par pari.
+    if (session.items.length === 1) ouvrirAvecMise(lienItems(session.items), session.items[0].mise);
     validerItems(session.items);
   };
 
@@ -317,7 +318,7 @@ export function ModalTicket() {
       titre="C'est validé"
     >
       <p className="text-[14px] text-doux">
-        {ticket.length > 1 ? `${ticket.length} paris enregistrés` : "Pari enregistré"} pour {eur(total)}. Winamax s&apos;est ouvert : reproduis {ticket.length > 1 ? "chaque ligne" : "la ligne"} ci-dessous, je
+        {ticket.length > 1 ? `${ticket.length} paris enregistrés` : "Pari enregistré"} pour {eur(total)}. Pour chaque ligne : « Winamax » ouvre le match et copie la mise, tu touches la sélection, tu colles la mise et tu valides. Je
         m&apos;occupe du reste (suivi et résultats automatiques).
       </p>
       <ul className="mt-4 space-y-2">
@@ -355,6 +356,16 @@ export function ModalTicket() {
                   <IcCopier />
                 </button>
               </div>
+              <button
+                onClick={() => {
+                  ouvrirAvecMise(p.jambes.length === 1 ? lienWinamax(p.jambes[0].lien) : WINAMAX, p.mise);
+                  setFaits((f) => new Set([...f, p.id]));
+                  notifier(`Mise de ${eur(p.mise)} copiée : colle-la sur Winamax.`, "info");
+                }}
+                className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-ligne bg-surface-3 text-[13px] font-semibold"
+              >
+                Winamax · mise {eur(p.mise)} copiée <IcExterne />
+              </button>
             </li>
           );
         })}

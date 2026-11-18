@@ -99,6 +99,13 @@ describe("détection de valeur", () => {
     expect(nul.label).toBe("Match nul");
   });
 
+  it("donne le lien direct du match Winamax quand son identifiant est connu", () => {
+    const ev = evenement("e9", { pinnacle: [2.0, 3.6, 4.1], winamax_fr: [2.2, 3.3, 3.7] });
+    ev.bookmakers.find((b) => b.key === "winamax_fr")!.sid = "41234567";
+    const s = construireSelections([ev], { maintenant: MAINTENANT })[0];
+    expect(s.link).toBe("https://www.winamax.fr/paris-sportifs/match/41234567");
+  });
+
   it("ignore les matchs commencés et ceux sans référence externe", () => {
     const passe = evenement("e2", { pinnacle: [2, 3.5, 4], winamax_fr: [2.1, 3.4, 3.8] }, -1);
     const seul = evenement("e3", { winamax_fr: [2.1, 3.4, 3.8] });

@@ -207,6 +207,7 @@ export function AutonomieProvider({ children }: { children: ReactNode }) {
           label: s.label,
           odds: s.odds,
           fairProb: s.fairProb,
+          ...(s.link ? { lien: s.link } : {}),
           statut: "en_cours" as const,
         })),
         cote: Math.round(it.cote * 100) / 100,
